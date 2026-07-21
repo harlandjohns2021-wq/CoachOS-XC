@@ -29,7 +29,7 @@
   <div class="main">
     <header class="topbar">
       <div><div class="eyebrow" id="teamEyebrow">Cross Country</div><h1 id="pageTitle">Dashboard</h1></div>
-      <div class="top-actions"><span class="chip" id="todayChip"></span><button class="secondary" id="openSettings">Team Settings</button><button class="primary" id="quickAdd">+ Add Athlete</button></div>
+      <div class="top-actions"><span class="chip" id="todayChip"></span><span class="chip">Auto-saved on device</span><button class="secondary" id="openSettings">Team Settings</button><button class="primary" id="quickAdd">+ Add Athlete</button></div>
     </header>
 
     <main class="content">
@@ -54,8 +54,8 @@
       </section>
 
       <section id="athletes" class="view">
-        <div class="section-title"><div><h2>Athletes</h2><p>Manage your roster and see each runner's current performance markers.</p></div><div class="toolbar"><div class="field"><label>Filter</label><select id="athleteFilter"><option value="all">All athletes</option><option value="Female">Girls</option><option value="Male">Boys</option></select></div><button class="primary" id="addAthleteBtn">+ Add athlete</button></div></div>
-        <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Athlete</th><th>Grade</th><th>1 Mile PR</th><th>2 Mile PR</th><th>5K PR</th><th>Attendance</th><th class="right">Actions</th></tr></thead><tbody id="athleteTable"></tbody></table></div><div id="athleteEmpty" class="empty hide">No athletes yet. Add your first runner to start building the team.</div></div>
+        <div class="section-title"><div><h2>Athletes</h2><p>Manage your roster and see each runner's current performance markers.</p></div><div class="toolbar"><div class="field"><label>Filter</label><select id="athleteFilter"><option value="all">All athletes</option><option value="Female">Girls</option><option value="Male">Boys</option></select></div><button class="secondary" id="pasteRosterBtn">Paste roster</button><button class="primary" id="addAthleteBtn">+ Add athlete</button></div></div>
+        <div class="card"><div class="card-head"><div><h3>Team roster</h3><div class="sub">Paste directly from a spreadsheet, CSV, email, or typed list. Duplicate names are skipped automatically.</div></div><span class="pill good">Auto-saved</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Athlete</th><th>Grade</th><th>1 Mile PR</th><th>2 Mile PR</th><th>5K PR</th><th>Attendance</th><th class="right">Actions</th></tr></thead><tbody id="athleteTable"></tbody></table></div><div id="athleteEmpty" class="empty hide">No athletes yet. Add your first runner or paste an entire roster.</div></div>
       </section>
 
       <section id="practice" class="view">
@@ -87,10 +87,13 @@
       </section>
 
       <section id="settings" class="view">
-        <div class="section-title"><div><h2>Settings</h2><p>Configure your team and manage the data stored on this device.</p></div></div>
+        <div class="section-title"><div><h2>Settings</h2><p>Configure your team and manage your CoachOS data.</p></div></div>
         <div class="grid-2">
           <div class="card"><div class="card-head"><div><h3>Team profile</h3><div class="sub">Used throughout your CoachOS workspace</div></div></div><div class="form-grid"><div class="field span-2"><label>Team name</label><input id="settingTeam" placeholder="Harts Bluff XC"></div><div class="field"><label>Season</label><input id="settingSeason" placeholder="2026 XC"></div><div class="field"><label>Head coach</label><input id="settingCoach" placeholder="Coach name"></div></div><div class="toolbar" style="margin-top:14px"><button class="primary" id="saveSettings">Save settings</button></div></div>
-          <div class="card"><div class="card-head"><div><h3>Data & backup</h3><div class="sub">This version stores data locally on this device</div></div></div><p class="muted">Export a full backup before changing devices. Cloud accounts and staff sharing are the next infrastructure layer.</p><div class="toolbar"><button class="secondary" id="exportBackup">Export backup</button><label class="ghost" style="display:inline-flex;align-items:center">Import backup<input type="file" id="importBackup" accept="application/json" hidden></label><button class="danger" id="resetApp">Reset app</button></div></div>
+          <div class="card"><div class="card-head"><div><h3>Account security</h3><div class="sub">Production authentication architecture</div></div><span class="pill warn">Backend setup required</span></div><div class="insight"><strong>Secure login is the next infrastructure step.</strong><p>The production version will use authenticated accounts and database-level access rules. Passwords will never be stored in browser data or committed to GitHub.</p></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h3>Data & backup</h3><div class="sub">Everything entered is saved locally on this device right now</div></div><span class="pill good">Auto-save active</span></div><p class="muted">Export a full backup before changing devices. Cloud synchronization will replace device-only storage once the authentication backend is connected.</p><div class="toolbar"><button class="secondary" id="exportBackup">Export backup</button><label class="ghost" style="display:inline-flex;align-items:center">Import backup<input type="file" id="importBackup" accept="application/json" hidden></label><button class="danger" id="resetApp">Reset app</button></div></div>
         </div>
       </section>
     </main>
@@ -109,7 +112,15 @@
   <div class="modal"><div class="modal-head"><div><strong id="athleteModalTitle">Add athlete</strong><div class="sub">Build the roster one runner at a time.</div></div><button class="icon-btn" data-close-modal>×</button></div><div class="modal-body"><div class="form-grid"><div class="field span-2"><label>Full name</label><input id="modalAthleteName" autocomplete="off"></div><div class="field"><label>Sex</label><select id="modalAthleteSex"><option>Female</option><option>Male</option></select></div><div class="field"><label>Grade</label><select id="modalAthleteGrade"><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div></div></div><div class="modal-foot"><button class="ghost" data-close-modal>Cancel</button><button class="primary" id="saveAthlete">Add athlete</button></div></div>
 </div>
 
+<div class="modal-backdrop" id="rosterImportModal" role="dialog" aria-modal="true" aria-labelledby="rosterImportTitle">
+  <div class="modal"><div class="modal-head"><div><strong id="rosterImportTitle">Paste roster</strong><div class="sub">Copy rows from Excel, Google Sheets, an email, or any text list.</div></div><button class="icon-btn" data-close-roster-import>×</button></div><div class="modal-body">
+    <div class="form-grid"><div class="field span-4"><label>Roster</label><textarea id="rosterPaste" style="min-height:220px" placeholder="Example:\nAlexis Gonzalez, Female, 12\nJordan Smith, Male, 10\nTaylor Brown"></textarea></div><div class="field"><label>Default sex</label><select id="rosterDefaultSex"><option>Female</option><option>Male</option></select></div><div class="field"><label>Default grade</label><select id="rosterDefaultGrade"><option>7</option><option>8</option><option selected>9</option><option>10</option><option>11</option><option>12</option></select></div><div class="field span-2"><label>Import preview</label><div id="rosterPreview" class="pill" style="justify-content:flex-start;min-height:42px;border-radius:11px">Paste your roster to preview the import.</div></div></div>
+    <div class="insight" style="margin-top:16px"><strong>Flexible format</strong><p>One athlete per line works. You can also paste columns such as Name, Grade, Sex. If a row has no grade or sex, CoachOS uses the defaults above.</p></div>
+  </div><div class="modal-foot"><button class="ghost" data-close-roster-import>Cancel</button><button class="primary" id="importRosterBtn">Import roster</button></div></div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
+<script src="roster-import.js"></script>
 </body>
 </html>
