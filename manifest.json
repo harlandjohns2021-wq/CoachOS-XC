@@ -1,9 +1,21 @@
 {
+  "id": "./",
   "name": "CoachOS XC",
   "short_name": "CoachOS XC",
+  "description": "A professional cross country coaching workspace for rosters, attendance, practices, timing, PRs, training groups, and team insights.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f5f7fb",
-  "theme_color": "#173f8a",
-  "description": "Mobile-first cross country coaching tracker for rosters, attendance, times, PRs, and training groups."
+  "orientation": "portrait-primary",
+  "background_color": "#f4f6fa",
+  "theme_color": "#0b1739",
+  "categories": ["sports", "productivity", "education"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
