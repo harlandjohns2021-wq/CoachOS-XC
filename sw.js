@@ -1,9 +1,12 @@
-const CACHE_NAME = 'coachos-xc-v2';
+const CACHE_NAME = 'coachos-xc-v3';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './roster-import.js',
+  './practice-enhancements.js',
+  './speech-to-text.js',
   './manifest.json',
   './icon.svg'
 ];
