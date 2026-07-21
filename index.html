@@ -4,17 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b1739">
-  <meta name="description" content="CoachOS XC is a professional cross country coaching workspace for rosters, attendance, practices, timing, PRs, training groups, and team insights.">
+  <meta name="description" content="XC Command is a professional cross country coaching workspace for rosters, attendance, practices, timing, PRs, training groups, and team insights.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>CoachOS XC</title>
+  <title>XC Command</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><div class="brand-mark">XC</div><div class="brand-copy"><strong>CoachOS XC</strong><span>Performance workspace</span></div></div>
+    <div class="brand"><div class="brand-mark">XC</div><div class="brand-copy"><strong>XC Command</strong><span>Performance workspace</span></div></div>
     <nav class="nav" aria-label="Primary navigation">
       <button class="active" data-view="dashboard"><span class="nav-ico">⌂</span>Dashboard</button>
       <button data-view="athletes"><span class="nav-ico">◉</span>Athletes</button>
@@ -71,9 +71,9 @@
       </section>
 
       <section id="timing" class="view">
-        <div class="section-title"><div><h2>Timing & Results</h2><p>Enter a full team's times quickly. PRs are detected automatically.</p></div><div class="toolbar"><div class="field"><label>Date</label><input type="date" id="resultDate"></div><div class="field"><label>Distance</label><select id="resultDistance"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div></div></div>
+        <div class="section-title"><div><h2>Timing & Results</h2><p>Enter practice times or bring meet results into one performance history.</p></div><div class="toolbar"><div class="field"><label>Date</label><input type="date" id="resultDate"></div><div class="field"><label>Distance</label><select id="resultDistance"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div><button class="secondary" id="importResultsBtn">Import results</button></div></div>
         <div class="card"><div class="card-head"><div><h3>Quick team entry</h3><div class="sub">Enter times as M:SS or H:MM:SS. Leave blank to skip an athlete.</div></div><button class="primary" id="saveBatchTimes">Save times</button></div><div id="batchTiming" class="results-grid"></div></div>
-        <div class="card"><div class="card-head"><div><h3>Performance history</h3><div class="sub">All recorded efforts, newest first</div></div><button class="ghost" id="exportCsv">Export CSV</button></div><div id="resultsHistory" class="list"></div></div>
+        <div class="card"><div class="card-head"><div><h3>Performance history</h3><div class="sub">Practice, MileSplit, AthleticNET, and imported meet results in one place</div></div><button class="ghost" id="exportCsv">Export CSV</button></div><div id="resultsHistory" class="list"></div></div>
       </section>
 
       <section id="insights" class="view">
@@ -87,9 +87,9 @@
       </section>
 
       <section id="settings" class="view">
-        <div class="section-title"><div><h2>Settings</h2><p>Configure your team and manage your CoachOS data.</p></div></div>
+        <div class="section-title"><div><h2>Settings</h2><p>Configure your team and manage your XC Command data.</p></div></div>
         <div class="grid-2">
-          <div class="card"><div class="card-head"><div><h3>Team profile</h3><div class="sub">Used throughout your CoachOS workspace</div></div></div><div class="form-grid"><div class="field span-2"><label>Team name</label><input id="settingTeam" placeholder="Harts Bluff XC"></div><div class="field"><label>Season</label><input id="settingSeason" placeholder="2026 XC"></div><div class="field"><label>Head coach</label><input id="settingCoach" placeholder="Coach name"></div></div><div class="toolbar" style="margin-top:14px"><button class="primary" id="saveSettings">Save settings</button></div></div>
+          <div class="card"><div class="card-head"><div><h3>Team profile</h3><div class="sub">Used throughout your XC Command workspace</div></div></div><div class="form-grid"><div class="field span-2"><label>Team name</label><input id="settingTeam" placeholder="Harts Bluff XC"></div><div class="field"><label>Season</label><input id="settingSeason" placeholder="2026 XC"></div><div class="field"><label>Head coach</label><input id="settingCoach" placeholder="Coach name"></div></div><div class="toolbar" style="margin-top:14px"><button class="primary" id="saveSettings">Save settings</button></div></div>
           <div class="card"><div class="card-head"><div><h3>Account security</h3><div class="sub">Production authentication architecture</div></div><span class="pill warn">Backend setup required</span></div><div class="insight"><strong>Secure login is the next infrastructure step.</strong><p>The production version will use authenticated accounts and database-level access rules. Passwords will never be stored in browser data or committed to GitHub.</p></div></div>
         </div>
         <div class="grid-2">
@@ -115,13 +115,33 @@
 <div class="modal-backdrop" id="rosterImportModal" role="dialog" aria-modal="true" aria-labelledby="rosterImportTitle">
   <div class="modal"><div class="modal-head"><div><strong id="rosterImportTitle">Paste roster</strong><div class="sub">Copy rows from Excel, Google Sheets, an email, or any text list.</div></div><button class="icon-btn" data-close-roster-import>×</button></div><div class="modal-body">
     <div class="form-grid"><div class="field span-4"><label>Roster</label><textarea id="rosterPaste" style="min-height:220px" placeholder="Example:\nAlexis Gonzalez, Female, 12\nJordan Smith, Male, 10\nTaylor Brown"></textarea></div><div class="field"><label>Default sex</label><select id="rosterDefaultSex"><option>Female</option><option>Male</option></select></div><div class="field"><label>Default grade</label><select id="rosterDefaultGrade"><option>7</option><option>8</option><option selected>9</option><option>10</option><option>11</option><option>12</option></select></div><div class="field span-2"><label>Import preview</label><div id="rosterPreview" class="pill" style="justify-content:flex-start;min-height:42px;border-radius:11px">Paste your roster to preview the import.</div></div></div>
-    <div class="insight" style="margin-top:16px"><strong>Flexible format</strong><p>One athlete per line works. You can also paste columns such as Name, Grade, Sex. If a row has no grade or sex, CoachOS uses the defaults above.</p></div>
+    <div class="insight" style="margin-top:16px"><strong>Flexible format</strong><p>One athlete per line works. You can also paste columns such as Name, Grade, Sex. If a row has no grade or sex, XC Command uses the defaults above.</p></div>
   </div><div class="modal-foot"><button class="ghost" data-close-roster-import>Cancel</button><button class="primary" id="importRosterBtn">Import roster</button></div></div>
+</div>
+
+<div class="modal-backdrop" id="resultsImportModal" role="dialog" aria-modal="true" aria-labelledby="resultsImportTitle">
+  <div class="modal">
+    <div class="modal-head"><div><strong id="resultsImportTitle">Import results</strong><div class="sub">Bring MileSplit, AthleticNET, or CSV results into XC Command.</div></div><button class="icon-btn" data-close-results-import>×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Source</label><select id="resultsImportSource"><option>MileSplit</option><option>AthleticNET</option><option>Meet CSV</option><option>Manual Import</option></select></div>
+        <div class="field"><label>Date</label><input type="date" id="resultsImportDate"></div>
+        <div class="field"><label>Distance</label><select id="resultsImportDistance"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div>
+        <div class="field"><label>Meet name</label><input id="resultsImportMeet" placeholder="North Hopkins Invitational"></div>
+        <div class="field span-4"><label>Choose CSV/text file</label><input type="file" id="resultsImportFile" accept=".csv,.txt,.tsv,text/csv,text/plain"></div>
+        <div class="field span-4"><label>Or paste results</label><textarea id="resultsImportPaste" style="min-height:220px" placeholder="Name, Time\nEmma Carter, 7:18\nSophia Martinez, 7:42"></textarea></div>
+        <div class="field span-4"><label>Import preview</label><div id="resultsImportPreview" class="insight">Paste results or choose a CSV/text file to preview the import.</div></div>
+      </div>
+      <div class="insight" style="margin-top:16px"><strong>Roster matching protects your data.</strong><p>XC Command matches imported names to athletes already on your roster, skips duplicate performances, and flags unmatched names for review. This imports exported or copied results. Direct automatic account syncing requires official access from MileSplit or AthleticNET.</p></div>
+    </div>
+    <div class="modal-foot"><button class="ghost" data-close-results-import>Cancel</button><button class="primary" id="confirmResultsImport">Import matched results</button></div>
+  </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 <script src="roster-import.js"></script>
+<script src="results-import.js"></script>
 <script src="practice-enhancements.js"></script>
 <script src="speech-to-text.js"></script>
 </body>
