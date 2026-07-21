@@ -1,47 +1,115 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#173f8a">
-<title>CoachOS XC</title>
-<link rel="manifest" href="manifest.json">
-<style>
-:root{--b:#173f8a;--b2:#2459b3;--bg:#f5f7fb;--c:#fff;--t:#172033;--m:#6b7280;--l:#dfe3ea;--g:#1f8f55;--r:#b42318}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--t)}button,input,select{font:inherit}button{cursor:pointer}.top{position:sticky;top:0;z-index:10;background:linear-gradient(135deg,var(--b),var(--b2));color:#fff;padding:18px 16px;border-radius:0 0 22px 22px}.top h1{margin:0;font-size:1.35rem}.top p{margin:4px 0 0;opacity:.8}.shell{max-width:980px;margin:auto;padding:16px 14px 90px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card,.stat{background:var(--c);border:1px solid #00000008;border-radius:18px;box-shadow:0 8px 24px #17203314}.stat{padding:16px}.stat strong{display:block;font-size:1.6rem}.stat span,.meta,.note{color:var(--m);font-size:.84rem}.card{padding:16px;margin-top:14px}.card h2{font-size:1.05rem;margin:0 0 12px}.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 150px}label{font-size:.8rem;color:var(--m);display:block;margin-bottom:6px}input,select{width:100%;padding:12px;border:1px solid var(--l);border-radius:12px;background:#fff}.primary,.secondary,.danger,.ghost{border-radius:12px;padding:11px 13px;font-weight:700}.primary{border:0;background:var(--b);color:#fff}.secondary{border:0;background:#eef3ff;color:var(--b)}.danger{border:0;background:#fff1f0;color:var(--r)}.ghost{border:1px solid var(--l);background:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.list{display:grid;gap:10px}.item{border:1px solid var(--l);border-radius:14px;padding:12px;background:#fff}.itemtop{display:flex;align-items:center;justify-content:space-between;gap:10px}.name{font-weight:800}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef3ff;color:var(--b);font-size:.75rem;font-weight:700}.pr{color:var(--g);font-weight:800}.empty{padding:20px;text-align:center;color:var(--m);border:1px dashed var(--l);border-radius:14px}.attendance{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--l)}.attendance:last-child{border-bottom:0}.toggle{display:flex;gap:6px}.toggle button{padding:8px 10px;border-radius:10px;border:1px solid var(--l);background:#fff}.toggle .on{background:var(--b);color:#fff;border-color:var(--b)}.view{display:none}.view.active{display:block}.tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#fff;border-top:1px solid var(--l);padding:8px 8px calc(8px + env(safe-area-inset-bottom))}.tabs button{border:0;background:transparent;color:var(--m);padding:8px 2px;font-size:.74rem}.tabs .active{color:var(--b);font-weight:800}@media(min-width:760px){.grid{grid-template-columns:repeat(4,1fr)}.tabs{position:sticky;margin:14px auto 0;max-width:980px;border:1px solid var(--l);border-radius:16px}.shell{padding-bottom:24px}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1739">
+  <meta name="description" content="CoachOS XC is a professional cross country coaching workspace for rosters, attendance, practices, timing, PRs, training groups, and team insights.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>CoachOS XC</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="top"><div style="max-width:980px;margin:auto"><h1>CoachOS XC</h1><p>Roster, attendance, times, PRs, and training groups.</p></div></header>
-<main class="shell">
-<section id="dashboard" class="view active">
-<div class="grid"><div class="stat"><strong id="sAth">0</strong><span>Athletes</span></div><div class="stat"><strong id="sPre">0</strong><span>Present Today</span></div><div class="stat"><strong id="sRes">0</strong><span>Timed Results</span></div><div class="stat"><strong id="sPr">0</strong><span>PR Performances</span></div></div>
-<div class="card"><h2>Recent Results</h2><div id="recent" class="list"></div></div>
-<div class="card"><h2>Quick Actions</h2><div class="row"><button class="primary" onclick="go('roster')">Add Athlete</button><button class="secondary" onclick="go('times')">Record Times</button><button class="secondary" onclick="go('attendance')">Take Attendance</button></div></div>
-</section>
-<section id="roster" class="view"><div class="card"><h2>Add Athlete</h2><div class="row"><div><label>Name</label><input id="aName" placeholder="Athlete name"></div><div><label>Sex</label><select id="aSex"><option>Female</option><option>Male</option></select></div><div><label>Grade</label><select id="aGrade"><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div></div><div class="actions"><button class="primary" onclick="addAthlete()">Add Athlete</button><button class="ghost" onclick="loadDemo()">Load Demo Roster</button></div></div><div class="card"><h2>Team Roster</h2><div id="rosterList" class="list"></div></div></section>
-<section id="attendance" class="view"><div class="card"><h2>Attendance</h2><p class="note">Tap Present or Absent. Today's attendance saves automatically.</p><div id="attendanceList"></div></div></section>
-<section id="times" class="view"><div class="card"><h2>Record Timed Run</h2><div class="row"><div><label>Athlete</label><select id="rAth"></select></div><div><label>Distance</label><select id="rDist"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div><div><label>Time</label><input id="rTime" placeholder="Example: 12:34"></div></div><div class="actions"><button class="primary" onclick="recordResult()">Save Result</button></div></div><div class="card"><h2>All Results</h2><div id="resultsList" class="list"></div></div></section>
-<section id="groups" class="view"><div class="card"><h2>Training Groups</h2><p class="note">Groups use the latest 2-mile time, then a 1-mile estimate if needed.</p><div id="groupList" class="list"></div></div><div class="card"><h2>Data Backup</h2><div class="actions"><button class="secondary" onclick="exportData()">Export Data</button><label class="ghost">Import Data<input type="file" accept="application/json" onchange="importData(event)" style="display:none"></label><button class="danger" onclick="resetAll()">Reset App</button></div></div></section>
-</main>
-<nav class="tabs"><button data-v="dashboard" class="active" onclick="go('dashboard')">Dashboard</button><button data-v="roster" onclick="go('roster')">Roster</button><button data-v="attendance" onclick="go('attendance')">Attendance</button><button data-v="times" onclick="go('times')">Times</button><button data-v="groups" onclick="go('groups')">Groups</button></nav>
-<script>
-const KEY='coachos_xc_v1';let state=load();
-function fresh(){return{athletes:[],results:[],attendance:{}}}function load(){try{return JSON.parse(localStorage.getItem(KEY))||fresh()}catch{return fresh()}}function save(){localStorage.setItem(KEY,JSON.stringify(state));render()}function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}function today(){return new Date().toISOString().slice(0,10)}function esc(s){return String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[x]))}
-function go(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.v===id));render();scrollTo({top:0,behavior:'smooth'})}
-function addAthlete(){let name=aName.value.trim();if(!name)return alert('Enter an athlete name.');state.athletes.push({id:uid(),name,sex:aSex.value,grade:aGrade.value});aName.value='';save()}
-function removeAthlete(id){if(!confirm('Remove this athlete and all results?'))return;state.athletes=state.athletes.filter(a=>a.id!==id);state.results=state.results.filter(r=>r.athleteId!==id);Object.values(state.attendance).forEach(d=>delete d[id]);save()}
-function parseTime(v){let p=v.trim().split(':').map(Number);if(p.some(Number.isNaN))return null;if(p.length===2)return p[0]*60+p[1];if(p.length===3)return p[0]*3600+p[1]*60+p[2];return null}function fmt(s){if(s==null)return'—';let h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=Math.round(s%60);return h?`${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`:`${m}:${String(x).padStart(2,'0')}`}
-function recordResult(){let athleteId=rAth.value,seconds=parseTime(rTime.value),distance=rDist.value;if(!athleteId)return alert('Add an athlete first.');if(seconds===null||seconds<=0)return alert('Enter a valid time, like 12:34.');let prior=state.results.filter(r=>r.athleteId===athleteId&&r.distance===distance),best=prior.length?Math.min(...prior.map(r=>r.seconds)):null,isPR=best===null||seconds<best;state.results.push({id:uid(),athleteId,distance,seconds,date:today(),isPR});rTime.value='';save();alert(isPR?'Saved. New PR!':'Saved.')}
-function setAtt(id,status){let d=today();state.attendance[d]||={};state.attendance[d][id]=status;save()}function athleteName(id){return state.athletes.find(a=>a.id===id)?.name||'Unknown athlete'}function best(id,d){let a=state.results.filter(r=>r.athleteId===id&&r.distance===d);return a.length?Math.min(...a.map(r=>r.seconds)):null}function latest(id,d){let a=state.results.filter(r=>r.athleteId===id&&r.distance===d);return a.length?a[a.length-1].seconds:null}
-function renderRoster(){if(!state.athletes.length){rosterList.innerHTML='<div class="empty">No athletes yet.</div>';return}rosterList.innerHTML=[...state.athletes].sort((a,b)=>a.name.localeCompare(b.name)).map(a=>`<div class="item"><div class="itemtop"><div><div class="name">${esc(a.name)}</div><div class="meta">${a.sex} • Grade ${a.grade}</div></div><button class="danger" onclick="removeAthlete('${a.id}')">Remove</button></div><div class="meta" style="margin-top:8px">1 Mile PR: ${fmt(best(a.id,'1 Mile'))} • 2 Mile PR: ${fmt(best(a.id,'2 Mile'))} • 5K PR: ${fmt(best(a.id,'5K'))}</div></div>`).join('')}
-function renderAttendance(){if(!state.athletes.length){attendanceList.innerHTML='<div class="empty">Add athletes before taking attendance.</div>';return}let d=state.attendance[today()]||{};attendanceList.innerHTML=[...state.athletes].sort((a,b)=>a.name.localeCompare(b.name)).map(a=>`<div class="attendance"><div><div class="name">${esc(a.name)}</div><div class="meta">Grade ${a.grade}</div></div><div class="toggle"><button class="${d[a.id]==='Present'?'on':''}" onclick="setAtt('${a.id}','Present')">Present</button><button class="${d[a.id]==='Absent'?'on':''}" onclick="setAtt('${a.id}','Absent')">Absent</button></div></div>`).join('')}
-function renderResults(){rAth.innerHTML=state.athletes.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');if(!state.results.length){resultsList.innerHTML='<div class="empty">No timed results yet.</div>';return}resultsList.innerHTML=[...state.results].reverse().map(r=>`<div class="item"><div class="itemtop"><div><div class="name">${esc(athleteName(r.athleteId))}</div><div class="meta">${r.distance} • ${r.date}</div></div><div><span class="pill">${fmt(r.seconds)}</span> ${r.isPR?'<span class="pr">PR</span>':''}</div></div></div>`).join('')}
-function renderGroups(){let a=state.athletes.map(x=>{let t=latest(x.id,'2 Mile');if(t==null){let m=latest(x.id,'1 Mile');t=m==null?null:m*2.12}return{...x,score:t}}).filter(x=>x.score!=null).sort((a,b)=>a.score-b.score);if(!a.length){groupList.innerHTML='<div class="empty">Record 1-mile or 2-mile times to generate groups.</div>';return}let n=Math.ceil(a.length/3),g=[['Group A',a.slice(0,n)],['Group B',a.slice(n,n*2)],['Group C',a.slice(n*2)]].filter(x=>x[1].length);groupList.innerHTML=g.map(([name,list])=>`<div class="item"><div class="name">${name}</div><div class="meta" style="margin-top:6px">${list.map(x=>esc(x.name)).join(' • ')}</div></div>`).join('')}
-function renderDash(){sAth.textContent=state.athletes.length;let d=state.attendance[today()]||{};sPre.textContent=Object.values(d).filter(x=>x==='Present').length;sRes.textContent=state.results.length;sPr.textContent=state.results.filter(r=>r.isPR).length;if(!state.results.length){recent.innerHTML='<div class="empty">Your latest timed runs will show here.</div>';return}recent.innerHTML=[...state.results].reverse().slice(0,5).map(r=>`<div class="item"><div class="itemtop"><div><div class="name">${esc(athleteName(r.athleteId))}</div><div class="meta">${r.distance} • ${r.date}</div></div><div><span class="pill">${fmt(r.seconds)}</span> ${r.isPR?'<span class="pr">PR</span>':''}</div></div></div>`).join('')}
-function render(){renderRoster();renderAttendance();renderResults();renderGroups();renderDash()}
-function loadDemo(){[['Avery Johnson','Female','9'],['Mia Rodriguez','Female','10'],['Jordan Smith','Male','11'],['Eli Carter','Male','9'],['Sofia Martinez','Female','8'],['Noah Brown','Male','12']].forEach(([name,sex,grade])=>state.athletes.push({id:uid(),name,sex,grade}));save()}
-function exportData(){let b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`coachos-xc-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}function importData(e){let f=e.target.files?.[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.athletes||!d.results||!d.attendance)throw 0;state=d;save();alert('Data imported.')}catch{alert('Invalid CoachOS XC backup.')}};r.readAsText(f)}function resetAll(){if(confirm('Erase all local CoachOS XC data on this device?')){state=fresh();save()}}
-if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));render();
-</script>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">XC</div><div class="brand-copy"><strong>CoachOS XC</strong><span>Performance workspace</span></div></div>
+    <nav class="nav" aria-label="Primary navigation">
+      <button class="active" data-view="dashboard"><span class="nav-ico">⌂</span>Dashboard</button>
+      <button data-view="athletes"><span class="nav-ico">◉</span>Athletes</button>
+      <button data-view="practice"><span class="nav-ico">◇</span>Practice</button>
+      <button data-view="timing"><span class="nav-ico">◷</span>Timing & Results</button>
+      <button data-view="insights"><span class="nav-ico">↗</span>Insights</button>
+      <button data-view="settings"><span class="nav-ico">⚙</span>Settings</button>
+    </nav>
+    <div class="sidebar-footer">Built for coaches who would rather coach than wrestle spreadsheets.</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div><div class="eyebrow" id="teamEyebrow">Cross Country</div><h1 id="pageTitle">Dashboard</h1></div>
+      <div class="top-actions"><span class="chip" id="todayChip"></span><button class="secondary" id="openSettings">Team Settings</button><button class="primary" id="quickAdd">+ Add Athlete</button></div>
+    </header>
+
+    <main class="content">
+      <section id="dashboard" class="view active">
+        <div class="hero">
+          <div><div class="eyebrow" style="color:#f4b942">Coach command center</div><h2 id="heroTitle">Build a faster, healthier team.</h2><p>Track what matters, spot progress early, and keep practice moving without turning coaching into data entry.</p><div class="hero-actions"><button class="primary" data-go="timing">Record today's times</button><button class="ghost" data-go="practice">Take attendance</button></div></div>
+          <div class="season-card"><div class="small">Current season</div><div class="big" id="seasonLabel">2026 XC</div><div class="small" id="seasonTeam">Your Team</div></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="stat-head"><span>Active athletes</span><span>Roster</span></div><strong id="statAthletes">0</strong><span class="delta" id="athleteDelta">Ready to build</span></div>
+          <div class="stat"><div class="stat-head"><span>Present today</span><span>Attendance</span></div><strong id="statPresent">0</strong><span class="delta" id="attendanceDelta">No attendance yet</span></div>
+          <div class="stat"><div class="stat-head"><span>Recorded efforts</span><span>Season</span></div><strong id="statResults">0</strong><span class="delta" id="resultDelta">Timed performances</span></div>
+          <div class="stat"><div class="stat-head"><span>Personal records</span><span>Progress</span></div><strong id="statPRs">0</strong><span class="delta" id="prDelta">Season breakthroughs</span></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h3>Recent performances</h3><div class="sub">Latest recorded times across the team</div></div><button class="ghost" data-go="timing">View all</button></div><div id="recentResults" class="list"></div></div>
+          <div>
+            <div class="card"><div class="card-head"><div><h3>Today's practice</h3><div class="sub" id="practiceDateLabel"></div></div><button class="ghost" data-go="practice">Open</button></div><div id="todayPractice"></div></div>
+            <div class="card"><div class="card-head"><div><h3>Coach insight</h3><div class="sub">Automatically generated from your team data</div></div></div><div id="dashboardInsight" class="insight"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="athletes" class="view">
+        <div class="section-title"><div><h2>Athletes</h2><p>Manage your roster and see each runner's current performance markers.</p></div><div class="toolbar"><div class="field"><label>Filter</label><select id="athleteFilter"><option value="all">All athletes</option><option value="Female">Girls</option><option value="Male">Boys</option></select></div><button class="primary" id="addAthleteBtn">+ Add athlete</button></div></div>
+        <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Athlete</th><th>Grade</th><th>1 Mile PR</th><th>2 Mile PR</th><th>5K PR</th><th>Attendance</th><th class="right">Actions</th></tr></thead><tbody id="athleteTable"></tbody></table></div><div id="athleteEmpty" class="empty hide">No athletes yet. Add your first runner to start building the team.</div></div>
+      </section>
+
+      <section id="practice" class="view">
+        <div class="section-title"><div><h2>Practice</h2><p>Take attendance and log the session while everyone is still in one place.</p></div><div class="toolbar"><div class="field"><label>Practice date</label><input type="date" id="practiceDate"></div><button class="secondary" id="markAllPresent">Mark all present</button></div></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h3>Attendance</h3><div class="sub">Saved automatically for the selected date</div></div><span class="pill" id="attendanceSummary">0 present</span></div><div id="attendanceGrid" class="attendance-grid"></div></div>
+          <div class="card"><div class="card-head"><div><h3>Session plan</h3><div class="sub">Record what the team actually did</div></div></div>
+            <div class="form-grid"><div class="field span-2"><label>Session title</label><input id="practiceTitle" placeholder="Easy aerobic run"></div><div class="field"><label>Type</label><select id="practiceType"><option>Easy Run</option><option>Long Run</option><option>Tempo</option><option>Intervals</option><option>Hills</option><option>Recovery</option><option>Race</option><option>Other</option></select></div><div class="field"><label>Distance</label><input id="practiceDistance" placeholder="3 miles"></div><div class="field span-4"><label>Notes</label><textarea id="practiceNotes" placeholder="Course, weather, splits, adjustments, athlete notes..."></textarea></div></div>
+            <div class="toolbar" style="margin-top:14px"><button class="primary" id="savePractice">Save practice</button></div>
+          </div>
+        </div>
+        <div class="card"><div class="card-head"><div><h3>Recent practices</h3><div class="sub">Your latest saved sessions</div></div></div><div id="practiceHistory" class="list"></div></div>
+      </section>
+
+      <section id="timing" class="view">
+        <div class="section-title"><div><h2>Timing & Results</h2><p>Enter a full team's times quickly. PRs are detected automatically.</p></div><div class="toolbar"><div class="field"><label>Date</label><input type="date" id="resultDate"></div><div class="field"><label>Distance</label><select id="resultDistance"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div></div></div>
+        <div class="card"><div class="card-head"><div><h3>Quick team entry</h3><div class="sub">Enter times as M:SS or H:MM:SS. Leave blank to skip an athlete.</div></div><button class="primary" id="saveBatchTimes">Save times</button></div><div id="batchTiming" class="results-grid"></div></div>
+        <div class="card"><div class="card-head"><div><h3>Performance history</h3><div class="sub">All recorded efforts, newest first</div></div><button class="ghost" id="exportCsv">Export CSV</button></div><div id="resultsHistory" class="list"></div></div>
+      </section>
+
+      <section id="insights" class="view">
+        <div class="section-title"><div><h2>Team Insights</h2><p>Turn your roster and performance data into practical coaching decisions.</p></div></div>
+        <div class="grid-3" id="insightKpis"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h3>Training groups</h3><div class="sub">Based on latest 2-mile performance, then estimated from 1-mile data</div></div></div><div id="trainingGroups" class="list"></div></div>
+          <div class="card"><div class="card-head"><div><h3>Coach recommendations</h3><div class="sub">Rule-based insights from the data currently available</div></div></div><div id="coachRecommendations" class="list"></div></div>
+        </div>
+        <div class="card"><div class="card-head"><div><h3>Top improvers</h3><div class="sub">Athletes with the strongest measured improvement</div></div></div><div id="topImprovers" class="list"></div></div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="section-title"><div><h2>Settings</h2><p>Configure your team and manage the data stored on this device.</p></div></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h3>Team profile</h3><div class="sub">Used throughout your CoachOS workspace</div></div></div><div class="form-grid"><div class="field span-2"><label>Team name</label><input id="settingTeam" placeholder="Harts Bluff XC"></div><div class="field"><label>Season</label><input id="settingSeason" placeholder="2026 XC"></div><div class="field"><label>Head coach</label><input id="settingCoach" placeholder="Coach name"></div></div><div class="toolbar" style="margin-top:14px"><button class="primary" id="saveSettings">Save settings</button></div></div>
+          <div class="card"><div class="card-head"><div><h3>Data & backup</h3><div class="sub">This version stores data locally on this device</div></div></div><p class="muted">Export a full backup before changing devices. Cloud accounts and staff sharing are the next infrastructure layer.</p><div class="toolbar"><button class="secondary" id="exportBackup">Export backup</button><label class="ghost" style="display:inline-flex;align-items:center">Import backup<input type="file" id="importBackup" accept="application/json" hidden></label><button class="danger" id="resetApp">Reset app</button></div></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <button class="active" data-view="dashboard"><span>⌂</span>Home</button>
+    <button data-view="athletes"><span>◉</span>Athletes</button>
+    <button data-view="practice"><span>◇</span>Practice</button>
+    <button data-view="timing"><span>◷</span>Timing</button>
+    <button data-view="insights"><span>↗</span>Insights</button>
+  </nav>
+</div>
+
+<div class="modal-backdrop" id="athleteModal" role="dialog" aria-modal="true" aria-labelledby="athleteModalTitle">
+  <div class="modal"><div class="modal-head"><div><strong id="athleteModalTitle">Add athlete</strong><div class="sub">Build the roster one runner at a time.</div></div><button class="icon-btn" data-close-modal>×</button></div><div class="modal-body"><div class="form-grid"><div class="field span-2"><label>Full name</label><input id="modalAthleteName" autocomplete="off"></div><div class="field"><label>Sex</label><select id="modalAthleteSex"><option>Female</option><option>Male</option></select></div><div class="field"><label>Grade</label><select id="modalAthleteGrade"><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div></div></div><div class="modal-foot"><button class="ghost" data-close-modal>Cancel</button><button class="primary" id="saveAthlete">Add athlete</button></div></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
 </body>
 </html>
