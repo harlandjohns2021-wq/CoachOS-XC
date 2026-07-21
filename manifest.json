@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "CoachOS XC",
-  "short_name": "CoachOS XC",
-  "description": "A professional cross country coaching workspace for rosters, attendance, practices, timing, PRs, training groups, and team insights.",
+  "name": "XC Command",
+  "short_name": "XC Command",
+  "description": "A professional cross country coaching workspace for rosters, attendance, practices, timing, imported meet results, PRs, training groups, and team insights.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
