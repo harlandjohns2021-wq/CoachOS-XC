@@ -207,3 +207,5 @@
   scan();
   observeDynamicControls();
 })();
+
+import('./firebase-cloud.js').catch((error) => console.error('XC Command cloud module failed to load.', error));
