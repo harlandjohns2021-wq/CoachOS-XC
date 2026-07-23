@@ -30,12 +30,15 @@ service cloud.firestore {
     }
 
     match /teams/{teamId} {
+      // A new account bootstraps its first team with teamId equal to the owner's UID.
+      allow read: if signedIn() && (teamId == request.auth.uid || isTeamMember(teamId));
+
       allow create: if signedIn()
+        && teamId == request.auth.uid
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.memberUids is list
         && request.auth.uid in request.resource.data.memberUids;
 
-      allow read: if isTeamMember(teamId);
       allow update, delete: if isTeamOwner(teamId);
 
       match /state/{stateId} {
