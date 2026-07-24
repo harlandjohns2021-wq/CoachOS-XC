@@ -58,7 +58,6 @@
   function applyTranscript(control, transcript) {
     const clean = transcript.trim();
     if (!clean) return false;
-
     if (control.tagName === 'SELECT') {
       const spoken = clean.toLowerCase().replace(/[^a-z0-9.]+/g, ' ').trim();
       const options = [...control.options];
@@ -73,16 +72,12 @@
       dispatchInputEvents(control);
       return true;
     }
-
     let value = clean;
     if (control.matches('[data-time-athlete]')) value = normalizeSpokenTime(clean);
-
     if (control.tagName === 'TEXTAREA') {
       const separator = control.value.trim() ? (control.id === 'rosterPaste' ? '\n' : ' ') : '';
       control.value = `${control.value}${separator}${value}`;
-    } else {
-      control.value = value;
-    }
+    } else control.value = value;
     dispatchInputEvents(control);
     return true;
   }
@@ -98,13 +93,8 @@
   }
 
   function startListening(control, button) {
-    if (!Recognition) {
-      setStatus(button, 'Speech-to-text is not supported by this browser.');
-      return;
-    }
-
+    if (!Recognition) return setStatus(button, 'Speech-to-text is not supported by this browser.');
     if (activeRecognition) stopActiveRecognition();
-
     const recognition = new Recognition();
     recognition.lang = document.documentElement.lang || navigator.language || 'en-US';
     recognition.interimResults = false;
@@ -112,30 +102,21 @@
     recognition.maxAlternatives = 1;
     activeRecognition = recognition;
     activeButton = button;
-
     recognition.onstart = () => {
       button.classList.add('listening');
       button.textContent = '■';
       button.setAttribute('aria-label', `Stop listening for ${labelFor(control)}`);
       setStatus(button, 'Listening…');
     };
-
     recognition.onresult = (event) => {
       const transcript = event.results?.[0]?.[0]?.transcript || '';
       const applied = applyTranscript(control, transcript);
       setStatus(button, applied ? `Heard: “${transcript}”` : `Could not match “${transcript}” to this field.`);
     };
-
     recognition.onerror = (event) => {
-      const messages = {
-        'not-allowed': 'Microphone permission was denied.',
-        'audio-capture': 'No microphone was available.',
-        'no-speech': 'No speech was detected.',
-        network: 'Speech recognition could not reach its service.'
-      };
+      const messages = { 'not-allowed': 'Microphone permission was denied.', 'audio-capture': 'No microphone was available.', 'no-speech': 'No speech was detected.', network: 'Speech recognition could not reach its service.' };
       setStatus(button, messages[event.error] || 'Speech recognition stopped unexpectedly.');
     };
-
     recognition.onend = () => {
       button.classList.remove('listening');
       button.textContent = '🎙';
@@ -143,62 +124,44 @@
       if (activeRecognition === recognition) activeRecognition = null;
       if (activeButton === button) activeButton = null;
     };
-
-    try {
-      recognition.start();
-    } catch {
-      setStatus(button, 'Speech recognition is already starting.');
-    }
+    try { recognition.start(); } catch { setStatus(button, 'Speech recognition is already starting.'); }
   }
 
   function enhanceControl(control) {
     if (!shouldEnhance(control)) return;
     control.dataset.speechEnhanced = 'true';
-
     const parent = control.parentElement;
     if (!parent) return;
-
     const wrapper = document.createElement('div');
     wrapper.className = 'xc-speech-wrap';
     parent.insertBefore(wrapper, control);
     wrapper.appendChild(control);
-
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'xc-speech-btn';
     button.textContent = '🎙';
     button.setAttribute('aria-label', `Speak to fill ${labelFor(control)}`);
     button.title = `Speak to fill ${labelFor(control)}`;
-    if (!Recognition) {
-      button.disabled = true;
-      button.title = 'Speech-to-text is not supported by this browser';
-    }
+    if (!Recognition) { button.disabled = true; button.title = 'Speech-to-text is not supported by this browser'; }
     wrapper.appendChild(button);
-
     const status = document.createElement('div');
     status.className = 'xc-speech-status';
     status.setAttribute('aria-live', 'polite');
     parent.insertBefore(status, wrapper.nextSibling);
-
     button.addEventListener('click', () => {
       if (activeButton === button && activeRecognition) stopActiveRecognition();
       else startListening(control, button);
     });
   }
 
-  function scan(root = document) {
-    root.querySelectorAll('input, textarea, select').forEach(enhanceControl);
-  }
-
+  function scan(root = document) { root.querySelectorAll('input, textarea, select').forEach(enhanceControl); }
   function observeDynamicControls() {
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (!(node instanceof Element)) return;
-          if (node.matches?.('input, textarea, select')) enhanceControl(node);
-          scan(node);
-        });
-      });
+      mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+        if (!(node instanceof Element)) return;
+        if (node.matches?.('input, textarea, select')) enhanceControl(node);
+        scan(node);
+      }));
     });
     observer.observe(document.body, { childList: true, subtree: true });
   }
@@ -208,6 +171,7 @@
   observeDynamicControls();
 })();
 
+import('./data-integrity-fixes.js').catch((error) => console.error('XC Command data integrity repairs failed to load.', error));
 import('./firebase-cloud.js').catch((error) => console.error('XC Command cloud module failed to load.', error));
 import('./distance-enhancements.js').catch((error) => console.error('XC Command distance enhancements failed to load.', error));
 import('./ai-coach.js').catch((error) => console.error('XC Command AI coach failed to load.', error));

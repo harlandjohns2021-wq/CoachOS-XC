@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xc-command-v5';
+const CACHE_NAME = 'xc-command-v6';
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,7 +8,11 @@ const APP_SHELL = [
   './results-import.js',
   './practice-enhancements.js',
   './speech-to-text.js',
+  './data-integrity-fixes.js',
   './firebase-cloud.js',
+  './distance-enhancements.js',
+  './ai-coach.js',
+  './individual-science-engine.js',
   './manifest.json',
   './icon.svg'
 ];
@@ -27,13 +31,21 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const isNavigation = event.request.mode === 'navigate';
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        if (response.ok && event.request.url.startsWith(self.location.origin)) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        if (isNavigation) return caches.match('./index.html');
+        return new Response('Offline resource unavailable.', { status: 503, statusText: 'Offline' });
+      })
   );
 });
