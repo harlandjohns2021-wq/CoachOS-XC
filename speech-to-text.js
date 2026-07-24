@@ -209,3 +209,5 @@
 })();
 
 import('./firebase-cloud.js').catch((error) => console.error('XC Command cloud module failed to load.', error));
+import('./distance-enhancements.js').catch((error) => console.error('XC Command distance enhancements failed to load.', error));
+import('./ai-coach.js').catch((error) => console.error('XC Command AI coach failed to load.', error));
