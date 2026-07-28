@@ -208,25 +208,21 @@
   observeDynamicControls();
 })();
 
-const FIREBASE_CDN_PROBE_URL = 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
-
-async function loadFirebaseCloudModule() {
-  try {
-    await fetch(FIREBASE_CDN_PROBE_URL, { method: 'GET', mode: 'no-cors', cache: 'no-store' });
-  } catch {
-    window.__xcCloudCalibration = {
-      ...(window.__xcCloudCalibration || {}),
-      firebaseModuleLoaded: false,
-      lastSyncStatus: 'Firebase CDN unreachable from this network.',
-      lastSyncTone: 'warn'
-    };
-    return;
-  }
-
-  import('./firebase-cloud.js').catch((error) => console.error('XC Command cloud module failed to load.', error));
+function shouldAutoLoadFirebaseCloud() {
+  const host = String(window.location.hostname || '').toLowerCase();
+  return window.location.protocol === 'https:' && host !== 'localhost' && host !== '127.0.0.1';
 }
 
-loadFirebaseCloudModule();
+if (shouldAutoLoadFirebaseCloud()) {
+  import('./firebase-cloud.js').catch((error) => console.error('XC Command cloud module failed to load.', error));
+} else {
+  window.__xcCloudCalibration = {
+    ...(window.__xcCloudCalibration || {}),
+    firebaseModuleLoaded: false,
+    lastSyncStatus: 'Cloud sync auto-load is disabled for local/non-HTTPS environments.',
+    lastSyncTone: 'warn'
+  };
+}
 import('./distance-enhancements.js').catch((error) => console.error('XC Command distance enhancements failed to load.', error));
 import('./ai-coach.js').catch((error) => console.error('XC Command AI coach failed to load.', error));
 import('./individual-science-engine.js').catch((error) => console.error('XC Command individual science engine failed to load.', error));
