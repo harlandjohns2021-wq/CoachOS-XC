@@ -36,6 +36,12 @@
     return match ? match[1] : fallback;
   }
 
+  function defaultCompetitionTeam(sex, grade) {
+    const isFemale = sex === 'Female';
+    if (Number(grade) <= 8) return isFemale ? 'Junior High Girls' : 'Junior High Boys';
+    return isFemale ? 'Junior Varsity Girls' : 'Junior Varsity Boys';
+  }
+
   function looksLikeHeader(parts) {
     const joined = parts.join(' ').toLowerCase();
     return joined.includes('name') && (joined.includes('grade') || joined.includes('sex') || joined.includes('gender'));
@@ -128,6 +134,7 @@
         name: row.name,
         sex: row.sex,
         grade: row.grade,
+        competitionTeam: defaultCompetitionTeam(row.sex, row.grade),
         active: true,
         createdAt: new Date().toISOString()
       });
@@ -167,7 +174,12 @@
     const athletes = [
       ...femaleNames.map((name, index) => ({ id: `demo_f_${index + 1}`, name, sex: 'Female', grade: grades[index % grades.length] })),
       ...maleNames.map((name, index) => ({ id: `demo_m_${index + 1}`, name, sex: 'Male', grade: grades[(index + 2) % grades.length] }))
-    ].map((athlete) => ({ ...athlete, active: true, createdAt: '2026-08-01T12:00:00.000Z' }));
+    ].map((athlete) => ({
+      ...athlete,
+      competitionTeam: defaultCompetitionTeam(athlete.sex, athlete.grade),
+      active: true,
+      createdAt: '2026-08-01T12:00:00.000Z'
+    }));
 
     const performance = {};
     athletes.forEach((athlete) => {

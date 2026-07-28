@@ -5,6 +5,14 @@
   const LEGACY_KEY = 'coachos_xc_v1';
   const $ = (id) => document.getElementById(id);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
+  const TEAM_OPTIONS = [
+    'Varsity Girls',
+    'Varsity Boys',
+    'Junior Varsity Girls',
+    'Junior Varsity Boys',
+    'Junior High Girls',
+    'Junior High Boys'
+  ];
 
   const defaultState = () => ({
     version: 2,
@@ -68,7 +76,12 @@
         ...(input.settings || {}),
         aiScope: { ...base.settings.aiScope, ...((input.settings || {}).aiScope || {}) }
       },
-      athletes: Array.isArray(input.athletes) ? input.athletes : [],
+      athletes: (Array.isArray(input.athletes) ? input.athletes : []).map((athlete) => ({
+        ...athlete,
+        sex: athlete?.sex === 'Male' ? 'Male' : 'Female',
+        grade: String(athlete?.grade || '9'),
+        competitionTeam: normalizeCompetitionTeam(athlete?.competitionTeam, athlete?.sex === 'Male' ? 'Male' : 'Female', String(athlete?.grade || '9'))
+      })),
       results: Array.isArray(input.results) ? input.results : [],
       attendance: input.attendance && typeof input.attendance === 'object' ? input.attendance : {},
       practices: Array.isArray(input.practices) ? input.practices : []
@@ -118,6 +131,25 @@
     if (!value) return '';
     const d = new Date(`${value}T12:00:00`);
     return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(d);
+  }
+
+  function defaultCompetitionTeam(sex, grade) {
+    const isFemale = sex === 'Female';
+    if (Number(grade) <= 8) return isFemale ? 'Junior High Girls' : 'Junior High Boys';
+    return isFemale ? 'Junior Varsity Girls' : 'Junior Varsity Boys';
+  }
+
+  function normalizeCompetitionTeam(team, sex, grade) {
+    return TEAM_OPTIONS.includes(team) ? team : defaultCompetitionTeam(sex, grade);
+  }
+
+  function teamMeta(team) {
+    const isGirls = String(team).includes('Girls');
+    const sex = isGirls ? 'Female' : 'Male';
+    let level = 'Junior High';
+    if (String(team).startsWith('Varsity')) level = 'Varsity';
+    if (String(team).startsWith('Junior Varsity')) level = 'Junior Varsity';
+    return { sex, level, poolKey: `${level}-${sex}` };
   }
 
   function athleteById(id) {
@@ -183,8 +215,13 @@
     $('modalAthleteName').value = '';
     $('modalAthleteSex').value = 'Female';
     $('modalAthleteGrade').value = '9';
+    $('modalAthleteTeam').value = defaultCompetitionTeam('Female', '9');
     $('athleteModal').classList.add('open');
     setTimeout(() => $('modalAthleteName').focus(), 50);
+  }
+
+  function syncModalAthleteTeam() {
+    $('modalAthleteTeam').value = defaultCompetitionTeam($('modalAthleteSex').value, $('modalAthleteGrade').value);
   }
 
   function closeAthleteModal() {
@@ -199,6 +236,7 @@
       name,
       sex: $('modalAthleteSex').value,
       grade: $('modalAthleteGrade').value,
+      competitionTeam: normalizeCompetitionTeam($('modalAthleteTeam').value, $('modalAthleteSex').value, $('modalAthleteGrade').value),
       active: true,
       createdAt: new Date().toISOString()
     });
@@ -214,6 +252,15 @@
     state.results = state.results.filter((row) => row.athleteId !== id);
     Object.values(state.attendance).forEach((day) => { if (day) delete day[id]; });
     saveState(`${athlete.name} removed.`);
+  }
+
+  function moveAthleteTeam(id, team) {
+    const athlete = athleteById(id);
+    if (!athlete) return;
+    const nextTeam = normalizeCompetitionTeam(team, athlete.sex, athlete.grade);
+    if (athlete.competitionTeam === nextTeam) return;
+    athlete.competitionTeam = nextTeam;
+    saveState(`${athlete.name} moved to ${nextTeam}.`);
   }
 
   function setAttendance(athleteId, status) {
@@ -327,10 +374,10 @@
   }
 
   function exportCsv() {
-    const rows = [['Date', 'Athlete', 'Sex', 'Grade', 'Distance', 'Time']];
+    const rows = [['Date', 'Athlete', 'Sex', 'Grade', 'Team', 'Distance', 'Time']];
     [...state.results].sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach((result) => {
       const athlete = athleteById(result.athleteId) || {};
-      rows.push([result.date, athlete.name || '', athlete.sex || '', athlete.grade || '', result.distance, formatTime(result.seconds)]);
+      rows.push([result.date, athlete.name || '', athlete.sex || '', athlete.grade || '', normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade), result.distance, formatTime(result.seconds)]);
     });
     const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     downloadFile(`coachos-xc-results-${localDateString()}.csv`, csv, 'text/csv');
@@ -405,6 +452,64 @@
     return marked ? Math.round((present / marked) * 100) : null;
   }
 
+  function raceEntriesFor(date, distance) {
+    const rows = state.results.filter((result) => result.date === date && result.distance === distance);
+    const bestByAthlete = new Map();
+    rows.forEach((result) => {
+      const prior = bestByAthlete.get(result.athleteId);
+      if (!prior || Number(result.seconds) < Number(prior.seconds)) bestByAthlete.set(result.athleteId, result);
+    });
+    return [...bestByAthlete.values()].map((result) => {
+      const athlete = athleteById(result.athleteId);
+      if (!athlete) return null;
+      const team = normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade);
+      return { athlete, team, seconds: Number(result.seconds), date: result.date, distance: result.distance };
+    }).filter(Boolean);
+  }
+
+  function teamScoreData(date, distance) {
+    const entries = raceEntriesFor(date, distance);
+    if (!entries.length) return [];
+    const byPool = new Map();
+    entries.forEach((entry) => {
+      const meta = teamMeta(entry.team);
+      if (!byPool.has(meta.poolKey)) byPool.set(meta.poolKey, []);
+      byPool.get(meta.poolKey).push({ ...entry, meta });
+    });
+
+    const rows = [];
+    byPool.forEach((poolEntries) => {
+      poolEntries.sort((a, b) => a.seconds - b.seconds);
+      const teams = new Map();
+      poolEntries.forEach((entry, index) => {
+        const place = index + 1;
+        if (!teams.has(entry.team)) teams.set(entry.team, []);
+        teams.get(entry.team).push({ ...entry, place });
+      });
+
+      const scoringTeams = [...teams.values()].filter((teamEntries) => teamEntries.length >= 5).length;
+      teams.forEach((teamEntries, teamName) => {
+        teamEntries.sort((a, b) => a.place - b.place);
+        const scoring = teamEntries.slice(0, 5);
+        const teamPoints = scoring.length === 5 ? scoring.reduce((total, item) => total + item.place, 0) : null;
+        const varsityAverage = teamMeta(teamName).level === 'Varsity' && teamEntries.length >= 7
+          ? teamEntries.slice(0, 7).reduce((total, item) => total + item.seconds, 0) / 7
+          : null;
+        rows.push({
+          teamName,
+          finishers: teamEntries.length,
+          teamPoints,
+          varsityAverage,
+          countsForScore: scoring.length === 5,
+          officialField: scoringTeams >= 2,
+          topFivePlaces: scoring.map((item) => item.place).join(', ') || '—',
+          displacers: teamEntries.slice(5, 7).map((item) => item.place).join(', ') || '—'
+        });
+      });
+    });
+    return rows.sort((a, b) => (a.teamPoints ?? Number.POSITIVE_INFINITY) - (b.teamPoints ?? Number.POSITIVE_INFINITY) || a.teamName.localeCompare(b.teamName));
+  }
+
   function renderHeader() {
     const now = new Date();
     $('todayChip').textContent = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now);
@@ -454,13 +559,18 @@
     return { title: 'The team data is taking shape', body: 'Keep logging consistent benchmark efforts and attendance. More repeated measurements will make the performance trends far more useful.' };
   }
 
+  function teamSelectOptions(current) {
+    return TEAM_OPTIONS.map((team) => `<option value="${esc(team)}"${current === team ? ' selected' : ''}>${esc(team)}</option>`).join('');
+  }
+
   function renderAthletes() {
     const filter = $('athleteFilter').value;
     const athletes = [...state.athletes].filter((athlete) => filter === 'all' || athlete.sex === filter).sort((a, b) => a.name.localeCompare(b.name));
     $('athleteEmpty').classList.toggle('hide', athletes.length > 0);
     $('athleteTable').innerHTML = athletes.map((athlete) => {
       const rate = attendanceRate(athlete.id);
-      return `<tr><td><div class="person"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">${esc(athlete.sex)}</div></div></div></td><td>${esc(athlete.grade)}</td><td>${formatTime(bestTime(athlete.id, '1 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '2 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '5K'))}</td><td>${rate == null ? '—' : `${rate}%`}</td><td class="right"><button class="danger" data-remove-athlete="${athlete.id}">Remove</button></td></tr>`;
+      const team = normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade);
+      return `<tr><td><div class="person"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">${esc(athlete.sex)}</div></div></div></td><td>${esc(athlete.grade)}</td><td><select data-athlete-team="${athlete.id}" aria-label="Move ${esc(athlete.name)} to team">${teamSelectOptions(team)}</select></td><td>${formatTime(bestTime(athlete.id, '1 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '2 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '5K'))}</td><td>${rate == null ? '—' : `${rate}%`}</td><td class="right"><button class="danger" data-remove-athlete="${athlete.id}">Remove</button></td></tr>`;
     }).join('');
   }
 
@@ -480,7 +590,16 @@
 
   function renderTiming() {
     const athletes = [...state.athletes].sort((a, b) => a.name.localeCompare(b.name));
-    $('batchTiming').innerHTML = athletes.length ? athletes.map((athlete) => `<div class="quick-entry"><div class="person wide"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">Grade ${esc(athlete.grade)} • ${esc(athlete.sex)}</div></div></div><div><div class="meta">Current PR</div><div class="time">${formatTime(bestTime(athlete.id, $('resultDistance').value))}</div></div><div class="field"><label>Time</label><input inputmode="numeric" placeholder="12:34" data-time-athlete="${athlete.id}"></div><div><span class="pill">${esc($('resultDistance').value)}</span></div></div>`).join('') : '<div class="empty">Add athletes before entering team times.</div>';
+    $('batchTiming').innerHTML = athletes.length ? athletes.map((athlete) => `<div class="quick-entry"><div class="person wide"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">Grade ${esc(athlete.grade)} • ${esc(athlete.sex)} • ${esc(normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade))}</div></div></div><div><div class="meta">Current PR</div><div class="time">${formatTime(bestTime(athlete.id, $('resultDistance').value))}</div></div><div class="field"><label>Time</label><input inputmode="numeric" placeholder="12:34" data-time-athlete="${athlete.id}"></div><div><span class="pill">${esc($('resultDistance').value)}</span></div></div>`).join('') : '<div class="empty">Add athletes before entering team times.</div>';
+
+    const scoreRows = teamScoreData($('resultDate').value || localDateString(), $('resultDistance').value);
+    $('teamScores').innerHTML = scoreRows.length ? scoreRows.map((row) => {
+      const pointsLabel = row.teamPoints == null
+        ? 'Need 5 finishers to score'
+        : `${row.teamPoints} pts${row.officialField ? '' : ' (single-team field)'}`;
+      const averageLabel = row.varsityAverage == null ? '—' : formatTime(row.varsityAverage);
+      return `<div class="list-item"><div><div class="name">${esc(row.teamName)}</div><div class="meta">Finishers: ${row.finishers} • Top-5 places: ${esc(row.topFivePlaces)} • Runners 6-7: ${esc(row.displacers)}</div></div><div style="text-align:right"><div class="time">${esc(pointsLabel)}</div><span class="pill">${esc(`Varsity 7 avg: ${averageLabel}`)}</span></div></div>`;
+    }).join('') : '<div class="empty">Record results for the selected date and distance to calculate team scores and varsity averages.</div>';
 
     const history = [...state.results].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     $('resultsHistory').innerHTML = history.length ? history.slice(0, 100).map((result) => {
@@ -657,10 +776,13 @@
     $$('[data-close-modal]').forEach((button) => button.addEventListener('click', closeAthleteModal));
     $('athleteModal').addEventListener('click', (event) => { if (event.target === $('athleteModal')) closeAthleteModal(); });
     $('modalAthleteName').addEventListener('keydown', (event) => { if (event.key === 'Enter') addAthlete(); });
+    $('modalAthleteSex').addEventListener('change', syncModalAthleteTeam);
+    $('modalAthleteGrade').addEventListener('change', syncModalAthleteTeam);
     $('athleteFilter').addEventListener('change', renderAthletes);
     $('practiceDate').addEventListener('change', () => { loadPracticeForm($('practiceDate').value); renderPractice(); });
     $('markAllPresent').addEventListener('click', markAllPresent);
     $('savePractice').addEventListener('click', savePractice);
+    $('resultDate').addEventListener('change', renderTiming);
     $('resultDistance').addEventListener('change', renderTiming);
     $('saveBatchTimes').addEventListener('click', saveBatchTimes);
     $('exportCsv').addEventListener('click', exportCsv);
@@ -677,6 +799,10 @@
       if (attendance) setAttendance(attendance.dataset.attendanceId, attendance.dataset.attendanceStatus);
       const deleteButton = event.target.closest('[data-delete-result]');
       if (deleteButton) deleteResult(deleteButton.dataset.deleteResult);
+    });
+    document.addEventListener('change', (event) => {
+      const teamMove = event.target.closest('[data-athlete-team]');
+      if (teamMove) moveAthleteTeam(teamMove.dataset.athleteTeam, teamMove.value);
     });
   }
 

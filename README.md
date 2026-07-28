@@ -8,6 +8,8 @@ Mobile-first cross country coaching MVP.
 - Track sex and grade
 - Daily attendance
 - Record 1-mile, 2-mile, and 5K times
+- Assign athletes to varsity, JV, and junior high race squads
+- Team score calculator with varsity 7-runner average support and cross-country point scoring checks
 - Automatic PR detection
 - Dashboard stats
 - Automatic training groups based on latest 2-mile time, with a 1-mile fallback estimate
