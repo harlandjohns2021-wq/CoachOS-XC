@@ -11,6 +11,7 @@ Mobile-first cross country coaching MVP.
 - Automatic PR detection
 - Dashboard stats
 - Automatic training groups based on latest 2-mile time, with a 1-mile fallback estimate
+- AI science coach with role-aware decision support, anonymized athlete trends, evidence sources, and recommendation feedback tracking
 - Export and import JSON backups
 - Local offline data storage
 - Basic PWA manifest and service worker
@@ -32,6 +33,13 @@ Once hosted on an HTTPS site, open the app in Safari and use **Share > Add to Ho
 ## Current limitation
 
 This MVP stores data locally in the browser using `localStorage`. It does not yet include user accounts, cloud sync, subscriptions, or multi-coach sharing.
+
+## AI security controls
+
+- Athlete names are removed before AI analysis requests.
+- AI recommendation API enforces strict output normalization and source-domain filtering.
+- API requests are protected with no-store responses, allowed-origin checks, and rate limiting.
+- Team admins can keep AI output at team-level only or allow anonymized athlete trend summaries.
 
 ## Next priorities
 

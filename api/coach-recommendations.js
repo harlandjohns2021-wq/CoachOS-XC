@@ -8,6 +8,46 @@ const ALLOWED_RESEARCH_DOMAINS = [
 ];
 
 const ALLOWED_SCOPE = ['teamTrends', 'athleteTrends', 'workloadBalance', 'raceReadiness', 'coachQueries'];
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 40;
+
+function setSecurityHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+}
+
+function resolveAllowedOrigins(req) {
+  const explicit = String(process.env.ALLOWED_APP_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const host = req.headers.host ? `https://${req.headers.host}` : '';
+  return [...new Set([...explicit, host, 'http://localhost:3000', 'http://localhost:8000'])];
+}
+
+function isAllowedOrigin(req) {
+  const origin = String(req.headers.origin || '').trim();
+  if (!origin) return true;
+  return resolveAllowedOrigins(req).includes(origin);
+}
+
+function tooManyRequests(req) {
+  const now = Date.now();
+  const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim() || 'unknown';
+  const key = `ai:${ip}`;
+  const store = globalThis.__coachosRateLimitStore || (globalThis.__coachosRateLimitStore = new Map());
+  const existing = store.get(key);
+  if (!existing || now - existing.windowStart > RATE_LIMIT_WINDOW_MS) {
+    store.set(key, { windowStart: now, count: 1 });
+    return false;
+  }
+  existing.count += 1;
+  store.set(key, existing);
+  return existing.count > RATE_LIMIT_MAX_REQUESTS;
+}
 
 function extractOutputText(response) {
   if (typeof response?.output_text === 'string') return response.output_text;
@@ -174,9 +214,19 @@ ${serialized}
 }
 
 export default async function handler(req, res) {
+  setSecurityHeaders(res);
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Use POST for coaching analysis.' });
+  }
+
+  if (!isAllowedOrigin(req)) {
+    return res.status(403).json({ error: 'Request origin is not allowed.' });
+  }
+
+  if (tooManyRequests(req)) {
+    return res.status(429).json({ error: 'Too many requests. Please retry in a few minutes.' });
   }
 
   if (!process.env.OPENAI_API_KEY) {

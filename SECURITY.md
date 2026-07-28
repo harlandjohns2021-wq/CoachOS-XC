@@ -26,6 +26,17 @@ The included policies restrict SELECT, INSERT, UPDATE, and DELETE operations to 
 - Production deployments should use HTTPS.
 - Staff/team sharing should use explicit membership records and RLS policies rather than shared passwords.
 
+## AI endpoint protections
+
+- `/api/coach-recommendations` accepts only POST and returns `Cache-Control: no-store`.
+- Responses are normalized against a fixed schema and source URLs are restricted to approved research domains.
+- The endpoint applies request-origin allowlisting and per-IP rate limiting to reduce scraping and abuse.
+- Athlete names are removed from AI payloads; only anonymized runner IDs are sent.
+
+## Protecting product ideas and code
+
+No browser-delivered JavaScript app can fully prevent someone from viewing client-side code. To protect proprietary logic, keep sensitive logic and data access on server APIs, require authenticated access, and keep private repositories and deployment credentials locked down.
+
 ## Next security implementation steps
 
 1. Create the production Supabase project.
