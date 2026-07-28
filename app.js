@@ -8,7 +8,20 @@
 
   const defaultState = () => ({
     version: 2,
-    settings: { teamName: 'Harts Bluff XC', season: '2026 XC', coachName: '' },
+    settings: {
+      teamName: 'Harts Bluff XC',
+      season: '2026 XC',
+      coachName: '',
+      aiRole: 'head_coach',
+      aiAthleteDetail: 'team_only',
+      aiScope: {
+        teamTrends: true,
+        athleteTrends: true,
+        workloadBalance: true,
+        raceReadiness: true,
+        coachQueries: true
+      }
+    },
     athletes: [],
     results: [],
     attendance: {},
@@ -50,7 +63,11 @@
       ...base,
       ...input,
       version: 2,
-      settings: { ...base.settings, ...(input.settings || {}) },
+      settings: {
+        ...base.settings,
+        ...(input.settings || {}),
+        aiScope: { ...base.settings.aiScope, ...((input.settings || {}).aiScope || {}) }
+      },
       athletes: Array.isArray(input.athletes) ? input.athletes : [],
       results: Array.isArray(input.results) ? input.results : [],
       attendance: input.attendance && typeof input.attendance === 'object' ? input.attendance : {},
@@ -277,6 +294,16 @@
     state.settings.teamName = $('settingTeam').value.trim() || 'My XC Team';
     state.settings.season = $('settingSeason').value.trim() || 'XC Season';
     state.settings.coachName = $('settingCoach').value.trim();
+    state.settings.aiRole = $('settingAiRole')?.value === 'assistant_coach' ? 'assistant_coach' : 'head_coach';
+    state.settings.aiAthleteDetail = $('settingAiAthleteDetail')?.value === 'anonymized' ? 'anonymized' : 'team_only';
+    state.settings.aiScope = {
+      teamTrends: Boolean($('scopeTeamTrends')?.checked),
+      athleteTrends: Boolean($('scopeAthleteTrends')?.checked),
+      workloadBalance: Boolean($('scopeWorkloadBalance')?.checked),
+      raceReadiness: Boolean($('scopeRaceReadiness')?.checked),
+      coachQueries: Boolean($('scopeCoachQueries')?.checked)
+    };
+    if (!Object.values(state.settings.aiScope).some(Boolean)) state.settings.aiScope.teamTrends = true;
     saveState('Team settings saved.');
   }
 
@@ -503,6 +530,13 @@
     $('settingTeam').value = state.settings.teamName || '';
     $('settingSeason').value = state.settings.season || '';
     $('settingCoach').value = state.settings.coachName || '';
+    $('settingAiRole').value = state.settings.aiRole === 'assistant_coach' ? 'assistant_coach' : 'head_coach';
+    $('settingAiAthleteDetail').value = state.settings.aiAthleteDetail === 'anonymized' ? 'anonymized' : 'team_only';
+    $('scopeTeamTrends').checked = state.settings.aiScope?.teamTrends !== false;
+    $('scopeAthleteTrends').checked = state.settings.aiScope?.athleteTrends !== false;
+    $('scopeWorkloadBalance').checked = state.settings.aiScope?.workloadBalance !== false;
+    $('scopeRaceReadiness').checked = state.settings.aiScope?.raceReadiness !== false;
+    $('scopeCoachQueries').checked = state.settings.aiScope?.coachQueries !== false;
   }
 
   function renderAll() {
