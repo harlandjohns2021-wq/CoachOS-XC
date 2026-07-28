@@ -43,7 +43,20 @@ let authModal = null;
 function defaultState() {
   return {
     version: 2,
-    settings: { teamName: 'Harts Bluff XC', season: '2026 XC', coachName: '' },
+    settings: {
+      teamName: 'Harts Bluff XC',
+      season: '2026 XC',
+      coachName: '',
+      aiRole: 'head_coach',
+      aiAthleteDetail: 'team_only',
+      aiScope: {
+        teamTrends: true,
+        athleteTrends: true,
+        workloadBalance: true,
+        raceReadiness: true,
+        coachQueries: true
+      }
+    },
     athletes: [],
     results: [],
     attendance: {},
@@ -58,7 +71,11 @@ function normalizeState(input) {
     ...base,
     ...value,
     version: 2,
-    settings: { ...base.settings, ...(value.settings || {}) },
+    settings: {
+      ...base.settings,
+      ...(value.settings || {}),
+      aiScope: { ...base.settings.aiScope, ...((value.settings || {}).aiScope || {}) }
+    },
     athletes: Array.isArray(value.athletes) ? value.athletes : [],
     results: Array.isArray(value.results) ? value.results : [],
     attendance: value.attendance && typeof value.attendance === 'object' ? value.attendance : {},
