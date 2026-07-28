@@ -570,7 +570,7 @@
     $('athleteTable').innerHTML = athletes.map((athlete) => {
       const rate = attendanceRate(athlete.id);
       const team = normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade);
-      return `<tr><td><div class="person"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">${esc(athlete.sex)}</div></div></div></td><td>${esc(athlete.grade)}</td><td><select data-athlete-team="${athlete.id}" aria-label="Move ${esc(athlete.name)} to team">${teamSelectOptions(team)}</select></td><td>${formatTime(bestTime(athlete.id, '1 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '2 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '5K'))}</td><td>${rate == null ? '—' : `${rate}%`}</td><td class="right"><button class="danger" data-remove-athlete="${athlete.id}">Remove</button></td></tr>`;
+      return `<tr><td><div class="person"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">${esc(athlete.sex)}</div></div></div></td><td>${esc(athlete.grade)}</td><td><select data-athlete-team="${esc(athlete.id)}" aria-label="Move ${esc(athlete.name)} to team">${teamSelectOptions(team)}</select></td><td>${formatTime(bestTime(athlete.id, '1 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '2 Mile'))}</td><td>${formatTime(bestTime(athlete.id, '5K'))}</td><td>${rate == null ? '—' : `${rate}%`}</td><td class="right"><button class="danger" data-remove-athlete="${esc(athlete.id)}">Remove</button></td></tr>`;
     }).join('');
   }
 
@@ -590,7 +590,7 @@
 
   function renderTiming() {
     const athletes = [...state.athletes].sort((a, b) => a.name.localeCompare(b.name));
-    $('batchTiming').innerHTML = athletes.length ? athletes.map((athlete) => `<div class="quick-entry"><div class="person wide"><div class="avatar">${initials(athlete.name)}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">Grade ${esc(athlete.grade)} • ${esc(athlete.sex)} • ${esc(normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade))}</div></div></div><div><div class="meta">Current PR</div><div class="time">${formatTime(bestTime(athlete.id, $('resultDistance').value))}</div></div><div class="field"><label>Time</label><input inputmode="numeric" placeholder="12:34" data-time-athlete="${athlete.id}"></div><div><span class="pill">${esc($('resultDistance').value)}</span></div></div>`).join('') : '<div class="empty">Add athletes before entering team times.</div>';
+    $('batchTiming').innerHTML = athletes.length ? athletes.map((athlete) => `<div class="quick-entry"><div class="person wide"><div class="avatar">${esc(initials(athlete.name))}</div><div><div class="name">${esc(athlete.name)}</div><div class="meta">Grade ${esc(athlete.grade)} • ${esc(athlete.sex)} • ${esc(normalizeCompetitionTeam(athlete.competitionTeam, athlete.sex, athlete.grade))}</div></div></div><div><div class="meta">Current PR</div><div class="time">${formatTime(bestTime(athlete.id, $('resultDistance').value))}</div></div><div class="field"><label>Time</label><input inputmode="numeric" placeholder="12:34" data-time-athlete="${esc(athlete.id)}"></div><div><span class="pill">${esc($('resultDistance').value)}</span></div></div>`).join('') : '<div class="empty">Add athletes before entering team times.</div>';
 
     const scoreRows = teamScoreData($('resultDate').value || localDateString(), $('resultDistance').value);
     $('teamScores').innerHTML = scoreRows.length ? scoreRows.map((row) => {
