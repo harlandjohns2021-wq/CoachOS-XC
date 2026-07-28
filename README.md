@@ -12,6 +12,7 @@ Mobile-first cross country coaching MVP.
 - Dashboard stats
 - Automatic training groups based on latest 2-mile time, with a 1-mile fallback estimate
 - AI science coach with role-aware decision support, anonymized athlete trends, evidence sources, and recommendation feedback tracking
+- Coach Education section with curated coaching articles/research links and video resources
 - Export and import JSON backups
 - Local offline data storage
 - Basic PWA manifest and service worker

@@ -173,7 +173,7 @@
     activeView = view;
     $$('.view').forEach((el) => el.classList.toggle('active', el.id === view));
     $$('[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
-    const labels = { dashboard: 'Dashboard', athletes: 'Athletes', practice: 'Practice', timing: 'Timing & Results', insights: 'Team Insights', settings: 'Settings' };
+    const labels = { dashboard: 'Dashboard', athletes: 'Athletes', practice: 'Practice', timing: 'Timing & Results', insights: 'Team Insights', education: 'Coach Education', settings: 'Settings' };
     $('pageTitle').textContent = labels[view] || 'CoachOS XC';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     renderAll();
