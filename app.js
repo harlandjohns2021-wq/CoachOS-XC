@@ -588,7 +588,7 @@
     loadPracticeForm(today);
     bindEvents();
     renderAll();
-    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js?v=2026-07-28-v2').catch(() => {}));
   }
 
   init();

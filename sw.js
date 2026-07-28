@@ -1,13 +1,14 @@
-const CACHE_NAME = 'xc-command-v5';
+const ASSET_VERSION = '2026-07-28-v2';
+const CACHE_NAME = `xc-command-${ASSET_VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
-  './roster-import.js',
-  './results-import.js',
-  './practice-enhancements.js',
-  './speech-to-text.js',
+  `./styles.css?v=${ASSET_VERSION}`,
+  `./app.js?v=${ASSET_VERSION}`,
+  `./roster-import.js?v=${ASSET_VERSION}`,
+  `./results-import.js?v=${ASSET_VERSION}`,
+  `./practice-enhancements.js?v=${ASSET_VERSION}`,
+  `./speech-to-text.js?v=${ASSET_VERSION}`,
   './firebase-cloud.js',
   './manifest.json',
   './icon.svg'
