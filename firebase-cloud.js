@@ -39,6 +39,22 @@ let unsubscribeSnapshot = null;
 let syncTimer = null;
 let suppressLocalSignal = false;
 let authModal = null;
+window.__xcCloudCalibration = window.__xcCloudCalibration || {
+  firebaseModuleLoaded: true,
+  authState: 'signed_out',
+  lastSyncStatus: 'Device only',
+  lastSyncTone: 'warn',
+  teamId: null,
+  lastError: null
+};
+
+function setCalibrationPatch(patch) {
+  window.__xcCloudCalibration = {
+    ...(window.__xcCloudCalibration || {}),
+    firebaseModuleLoaded: true,
+    ...patch
+  };
+}
 
 function defaultState() {
   return {
@@ -213,6 +229,7 @@ function setStatus(text, tone = '') {
     settingsPill.textContent = text;
     settingsPill.className = `pill ${tone}`.trim();
   }
+  setCalibrationPatch({ lastSyncStatus: text, lastSyncTone: tone || '' });
 }
 
 function setAuthMessage(message, isError = false) {
@@ -434,6 +451,7 @@ async function pushLocalState() {
   } catch (error) {
     console.error('XC Command cloud sync failed.', error);
     setStatus(error?.code === 'permission-denied' ? 'Rules needed' : 'Sync error', 'warn');
+    setCalibrationPatch({ lastError: error?.code || error?.message || 'sync_error' });
   }
 }
 
@@ -488,6 +506,7 @@ function startRealtimeSync() {
   }, (error) => {
     console.error('XC Command real-time sync failed.', error);
     setStatus(error?.code === 'permission-denied' ? 'Rules needed' : 'Sync error', 'warn');
+    setCalibrationPatch({ lastError: error?.code || error?.message || 'realtime_sync_error' });
   });
 }
 
@@ -537,6 +556,7 @@ onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
     currentTeamId = null;
+    setCalibrationPatch({ authState: 'signed_out', teamId: null });
     updateSignedOutUI();
     return;
   }
@@ -544,6 +564,7 @@ onAuthStateChanged(auth, async (user) => {
   updateSignedInUI(user);
   try {
     currentTeamId = await ensureTeam(user);
+    setCalibrationPatch({ authState: 'signed_in', teamId: currentTeamId, lastError: null });
     const needsReload = await hydrateFromCloud();
     if (needsReload) {
       window.location.reload();
@@ -554,5 +575,10 @@ onAuthStateChanged(auth, async (user) => {
   } catch (error) {
     console.error('XC Command Firebase setup failed.', error);
     setStatus(error?.code === 'permission-denied' ? 'Rules needed' : 'Cloud error', 'warn');
+    setCalibrationPatch({
+      authState: 'error',
+      teamId: currentTeamId,
+      lastError: error?.code || error?.message || 'cloud_setup_error'
+    });
   }
 });

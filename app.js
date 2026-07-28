@@ -539,6 +539,104 @@
     $('scopeCoachQueries').checked = state.settings.aiScope?.coachQueries !== false;
   }
 
+  function calibrationTone(ok) {
+    return ok ? 'good' : 'warn';
+  }
+
+  function calibrationLabel(ok) {
+    return ok ? 'Calibrated' : 'Needs attention';
+  }
+
+  function renderCalibrationResults(items, overallOk) {
+    const list = $('connectionCalibrationResults');
+    const pill = $('connectionCalibrationPill');
+    if (pill) {
+      pill.textContent = overallOk ? 'Calibrated' : 'Attention needed';
+      pill.className = `pill ${overallOk ? 'good' : 'warn'}`;
+    }
+    if (!list) return;
+    list.innerHTML = items.map((item) => `
+      <div class="list-item">
+        <div>
+          <div class="name">${esc(item.label)}</div>
+          <div class="meta">${esc(item.detail)}</div>
+        </div>
+        <span class="pill ${calibrationTone(item.ok)}">${calibrationLabel(item.ok)}</span>
+      </div>
+    `).join('');
+  }
+
+  async function runConnectionCalibration() {
+    const button = $('runConnectionCalibration');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Calibrating...';
+    }
+
+    const checks = [];
+    let health = null;
+
+    try {
+      const response = await fetch('/api/connection-health', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Vercel calibration endpoint unavailable.');
+      health = await response.json();
+      checks.push({
+        label: 'Browser → Vercel',
+        ok: true,
+        detail: `Connected (${health.vercel?.environment || 'unknown'} env, ${health.vercel?.region || 'unknown'} region)`
+      });
+    } catch (error) {
+      checks.push({
+        label: 'Browser → Vercel',
+        ok: false,
+        detail: error.message || 'Could not reach Vercel API.'
+      });
+    }
+
+    checks.push({
+      label: 'Vercel → ChatGPT (OpenAI)',
+      ok: Boolean(health?.openai?.configured),
+      detail: health?.openai?.configured
+        ? `OPENAI_API_KEY configured (model ${health.openai.model || 'gpt-5-mini'})`
+        : 'OPENAI_API_KEY missing in Vercel environment variables.'
+    });
+
+    checks.push({
+      label: 'GitHub ↔ Vercel',
+      ok: Boolean(health?.github?.linked),
+      detail: health?.github?.linked
+        ? `Linked via ${health.github.repo} @ ${String(health.github.commit || '').slice(0, 7)}`
+        : 'Vercel Git metadata missing. Reconnect the GitHub repository in Vercel.'
+    });
+
+    const cloud = window.__xcCloudCalibration || {};
+    const firestoreLoaded = Boolean(cloud.firebaseModuleLoaded);
+    const firestoreSynced = firestoreLoaded && (cloud.authState === 'signed_in' || cloud.lastSyncTone === 'good');
+
+    checks.push({
+      label: 'Browser → Firestore module',
+      ok: firestoreLoaded,
+      detail: firestoreLoaded ? 'Firebase cloud module loaded.' : 'Firebase cloud module did not load.'
+    });
+
+    checks.push({
+      label: 'Firestore auth/sync',
+      ok: firestoreSynced,
+      detail: firestoreSynced
+        ? `State: ${cloud.lastSyncStatus || 'Cloud synced'}`
+        : `State: ${cloud.lastSyncStatus || 'Sign in required or sync not ready.'}`
+    });
+
+    const overallOk = checks.every((item) => item.ok);
+    renderCalibrationResults(checks, overallOk);
+    showToast(overallOk ? 'All core connections are calibrated.' : 'Calibration found items to fix.');
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Run calibration';
+    }
+  }
+
   function renderAll() {
     renderHeader();
     renderDashboard();
@@ -570,6 +668,7 @@
     $('exportBackup').addEventListener('click', exportBackup);
     $('importBackup').addEventListener('change', (event) => importBackup(event.target.files?.[0]));
     $('resetApp').addEventListener('click', resetApp);
+    $('runConnectionCalibration')?.addEventListener('click', runConnectionCalibration);
 
     document.addEventListener('click', (event) => {
       const remove = event.target.closest('[data-remove-athlete]');

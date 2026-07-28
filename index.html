@@ -120,6 +120,18 @@
         </div>
         <div class="grid-2">
           <div class="card"><div class="card-head"><div><h3>Data & backup</h3><div class="sub">Everything entered is saved locally on this device right now</div></div><span class="pill good">Auto-save active</span></div><p class="muted">Export a full backup before changing devices. Cloud synchronization will replace device-only storage once the authentication backend is connected.</p><div class="toolbar"><button class="secondary" id="exportBackup">Export backup</button><label class="ghost" style="display:inline-flex;align-items:center">Import backup<input type="file" id="importBackup" accept="application/json" hidden></label><button class="danger" id="resetApp">Reset app</button></div></div>
+          <div class="card">
+            <div class="card-head">
+              <div><h3>Connection calibration</h3><div class="sub">Verify ChatGPT, Vercel, GitHub, and Firestore connection readiness</div></div>
+              <span class="pill" id="connectionCalibrationPill">Not run</span>
+            </div>
+            <div class="toolbar">
+              <button class="primary" id="runConnectionCalibration">Run calibration</button>
+            </div>
+            <div id="connectionCalibrationResults" class="list" style="margin-top:14px">
+              <div class="list-item"><div><div class="name">No checks yet</div><div class="meta">Run calibration to validate production connections.</div></div></div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
