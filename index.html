@@ -71,7 +71,7 @@
       </section>
 
       <section id="timing" class="view">
-        <div class="section-title"><div><h2>Timing & Results</h2><p>Enter practice times or bring meet results into one performance history.</p></div><div class="toolbar"><div class="field"><label>Date</label><input type="date" id="resultDate"></div><div class="field"><label>Distance</label><select id="resultDistance"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div><button class="secondary" id="importResultsBtn">Import results</button></div></div>
+        <div class="section-title"><div><h2>Timing & Results</h2><p>Enter practice times or bring meet results into one performance history.</p></div><div class="toolbar"><div class="field"><label>Date</label><input type="date" id="resultDate"></div><div class="field"><label>Distance</label><select id="resultDistance"><option>1 Mile</option><option>2 Mile</option><option>3 Mile</option><option>3K</option><option>5K</option></select></div><button class="secondary" id="importResultsBtn">Import results</button></div></div>
         <div class="card"><div class="card-head"><div><h3>Quick team entry</h3><div class="sub">Enter times as M:SS or H:MM:SS. Leave blank to skip an athlete.</div></div><button class="primary" id="saveBatchTimes">Save times</button></div><div id="batchTiming" class="results-grid"></div></div>
         <div class="card"><div class="card-head"><div><h3>Performance history</h3><div class="sub">Practice, MileSplit, AthleticNET, and imported meet results in one place</div></div><button class="ghost" id="exportCsv">Export CSV</button></div><div id="resultsHistory" class="list"></div></div>
       </section>
@@ -126,7 +126,7 @@
       <div class="form-grid">
         <div class="field"><label>Source</label><select id="resultsImportSource"><option>MileSplit</option><option>AthleticNET</option><option>Meet CSV</option><option>Manual Import</option></select></div>
         <div class="field"><label>Date</label><input type="date" id="resultsImportDate"></div>
-        <div class="field"><label>Distance</label><select id="resultsImportDistance"><option>1 Mile</option><option>2 Mile</option><option>5K</option></select></div>
+        <div class="field"><label>Distance</label><select id="resultsImportDistance"><option>1 Mile</option><option>2 Mile</option><option>3 Mile</option><option>3K</option><option>5K</option></select></div>
         <div class="field"><label>Meet name</label><input id="resultsImportMeet" placeholder="North Hopkins Invitational"></div>
         <div class="field span-4"><label>Choose CSV/text file</label><input type="file" id="resultsImportFile" accept=".csv,.txt,.tsv,text/csv,text/plain"></div>
         <div class="field span-4"><label>Or paste results</label><textarea id="resultsImportPaste" style="min-height:220px" placeholder="Name, Time\nEmma Carter, 7:18\nSophia Martinez, 7:42"></textarea></div>

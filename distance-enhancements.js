@@ -4,6 +4,7 @@
   const STANDARD_DISTANCES = [
     { label: '1 Mile', meters: 1609.344 },
     { label: '2 Mile', meters: 3218.688 },
+    { label: '3 Mile', meters: 4828.032 },
     { label: '3K', meters: 3000 },
     { label: '3200m', meters: 3200 },
     { label: '5K', meters: 5000 }
@@ -83,7 +84,7 @@
     customField.innerHTML = `
       <label for="${inputId}">${labelText}</label>
       <input id="${inputId}" inputmode="decimal" autocomplete="off" data-no-speech="true" placeholder="Examples: 2.9K, 4.8K, 4900m, 3.05 miles">
-      <div class="sub" id="${inputId}Help">Exact course distance is saved. Courses within 5% of 3K, 3200m, 2 miles, or 5K are marked as close.</div>
+      <div class="sub" id="${inputId}Help">Exact course distance is saved. Courses within 5% of 3K, 2 miles, 3 miles, or 5K are marked as close.</div>
     `;
     field.insertAdjacentElement('afterend', customField);
 

@@ -341,7 +341,11 @@
       sources.forEach((source) => {
         if (!source?.url) return;
         const link = document.createElement('a');
-        link.href = source.url;
+        try {
+          link.href = new URL(source.url).toString();
+        } catch {
+          return;
+        }
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.textContent = source.title || source.url;

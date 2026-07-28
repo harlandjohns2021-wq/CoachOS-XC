@@ -3,7 +3,7 @@
 
   const APP_KEY = 'coachos_xc_v2';
   const RIEGEL_EXPONENT = 1.06;
-  const STANDARD_METERS = { '1 Mile': 1609.344, '2 Mile': 3218.688, '3K': 3000, '3200m': 3200, '5K': 5000 };
+  const STANDARD_METERS = { '1 Mile': 1609.344, '2 Mile': 3218.688, '3 Mile': 4828.032, '3K': 3000, '3200m': 3200, '5K': 5000 };
 
   function readState() {
     try { return JSON.parse(localStorage.getItem(APP_KEY)) || {}; }

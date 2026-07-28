@@ -112,6 +112,8 @@
   function normalizeDistance(value, fallback) {
     const raw = String(value || '').toLowerCase();
     if (/5\s*k|5000/.test(raw)) return '5K';
+    if (/3\s*k|3000/.test(raw)) return '3K';
+    if (/3\s*mile|3mi|4828/.test(raw)) return '3 Mile';
     if (/2\s*mile|3200/.test(raw)) return '2 Mile';
     if (/1\s*mile|1600/.test(raw)) return '1 Mile';
     return fallback;

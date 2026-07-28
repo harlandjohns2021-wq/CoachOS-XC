@@ -173,8 +173,9 @@ AI request context:
 - Known data sufficiency limitations: ${(insufficiencyContext || []).join(' | ') || 'none'}
 
 Important coaching context:
-- High-school boys commonly race 5K.
-- High-school girls in this program commonly race 3K.
+- High-school boys in this program commonly race 3 miles or 5K.
+- High-school girls in this program commonly race 2 miles or 3K.
+- Junior-high races in this program commonly use 2 miles or 3K.
 - Courses may be slightly short or long. Preserve exact entered distance.
 - Winning-team analysis should emphasize top-five scoring strength, 1-to-5 compression, 6-7 depth, attendance, development rate, pacing, aerobic consistency, threshold development, recovery, strength, and championship timing.
 
