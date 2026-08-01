@@ -5,7 +5,13 @@ import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/fireb
 const STORAGE_KEY = 'coachos_xc_v2';
 const RESET_KEY = 'xccommand_season_reset_2026_08_01_v1';
 const CLOUD_RESET_KEY = 'xccommand_season_reset_2026_08_01_cloud_v1';
+const CACHE_RESET_KEY = 'xccommand_season_reset_2026_08_01_cache_v1';
 const CLOUD_META_KEY = 'xccommand_cloud_meta_v1';
+const STALE_ANALYSIS_KEYS = [
+  'xccommand_ai_coach_cache_v1',
+  'xccommand_ai_coach_cache_v2',
+  'xccommand_ai_feedback_v1'
+];
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAnWcn0k7Y2ihT4asmYn551THciMNKbCIc',
@@ -23,6 +29,12 @@ function safeJson(value, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function clearStaleAnalysisOnce() {
+  if (!localStorage.getItem(RESET_KEY) || localStorage.getItem(CACHE_RESET_KEY)) return;
+  STALE_ANALYSIS_KEYS.forEach((key) => localStorage.removeItem(key));
+  localStorage.setItem(CACHE_RESET_KEY, JSON.stringify({ appliedAt: new Date().toISOString() }));
 }
 
 function currentUserOnce(auth) {
@@ -43,6 +55,8 @@ function currentUserOnce(auth) {
 }
 
 export async function prepareSeasonResetCloud() {
+  clearStaleAnalysisOnce();
+
   if (!localStorage.getItem(RESET_KEY) || localStorage.getItem(CLOUD_RESET_KEY)) {
     return { allowCloudSync: true, resetNeeded: false };
   }
