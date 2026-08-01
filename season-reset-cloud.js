@@ -3,10 +3,13 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
 
 const STORAGE_KEY = 'coachos_xc_v2';
+const TEAM_KEY = 'xccommand_team_assignments_v1';
 const RESET_KEY = 'xccommand_season_reset_2026_08_01_v1';
 const CLOUD_RESET_KEY = 'xccommand_season_reset_2026_08_01_cloud_v1';
 const CACHE_RESET_KEY = 'xccommand_season_reset_2026_08_01_cache_v1';
 const ATTENDANCE_MIGRATION_KEY = 'xccommand_attendance_2026_08_01_v1';
+const ROSTER_ASSIGNMENT_KEY = 'xccommand_roster_assignments_2026_08_01_v1';
+const ROSTER_ASSIGNMENT_CLOUD_KEY = 'xccommand_roster_assignments_2026_08_01_cloud_v1';
 const ATTENDANCE_DATE = '2026-08-01';
 const CLOUD_META_KEY = 'xccommand_cloud_meta_v1';
 const STALE_ANALYSIS_KEYS = [
@@ -14,6 +17,48 @@ const STALE_ANALYSIS_KEYS = [
   'xccommand_ai_coach_cache_v2',
   'xccommand_ai_feedback_v1'
 ];
+
+const ROSTER_ASSIGNMENTS = {
+  jh_cynthia_hernandez: { sex: 'Female', teamId: 'jh-girls' },
+  jh_nicole_hernandez: { sex: 'Female', teamId: 'jh-girls' },
+  jh_lia_ayala: { sex: 'Female', teamId: 'jh-girls' },
+  jh_abel_green: { sex: 'Male', teamId: 'jh-boys' },
+  jh_aiden_green: { sex: 'Male', teamId: 'jh-boys' },
+  jh_isaac_ates: { sex: 'Male', teamId: 'jh-boys' },
+  jh_conner_shumate: { sex: 'Male', teamId: 'jh-boys' },
+  jh_julian_wario: { sex: 'Male', teamId: 'jh-boys' },
+  jh_mckaelah_segura: { sex: 'Female', teamId: 'jh-girls' },
+  jh_miranda_lierra: { sex: 'Female', teamId: 'jh-girls' },
+  jh_aj_green: { sex: 'Female', teamId: 'jh-girls' },
+  jh_tess_scoggins: { sex: 'Female', teamId: 'jh-girls' },
+  jh_kynlee_cheek: { sex: 'Female', teamId: 'jh-girls' },
+  jh_jaelle_rocha: { sex: 'Female', teamId: 'jh-girls' },
+  jh_sumaya_romero: { sex: 'Female', teamId: 'jh-girls' },
+  jh_aliyah_torres: { sex: 'Female', teamId: 'jh-girls' },
+  jh_emmett_thomas: { sex: 'Male', teamId: 'jh-boys' },
+  jh_zachary_dunn: { sex: 'Male', teamId: 'jh-boys' },
+  jh_martin_williams: { sex: 'Male', teamId: 'jh-boys' },
+  jh_roan_clark: { sex: 'Male', teamId: 'jh-boys' },
+  jh_jameson_nichols: { sex: 'Male', teamId: 'jh-boys' },
+
+  hs_tony_hernandez: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_chris_jimnez: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_yaretzi_prado: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_claire_scoggins: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_julian_garcia: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_molly_bloomer: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_paisley_bloomer: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_daena_salazar: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_delainy_torres: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_ivan_olvera: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_lukas_marshall: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_bianca_aguilar: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_aaron_klump: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_gerardo_hernandez: { sex: 'Male', teamId: 'varsity-boys' },
+  hs_katherine_orsorto: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_jackie_arellano: { sex: 'Female', teamId: 'varsity-girls' },
+  hs_jesus_cordova: { sex: 'Male', teamId: 'varsity-boys' }
+};
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAnWcn0k7Y2ihT4asmYn551THciMNKbCIc',
@@ -79,6 +124,44 @@ function applyAug1AttendanceOnce() {
   return true;
 }
 
+function applyRosterAssignmentsOnce() {
+  if (localStorage.getItem(ROSTER_ASSIGNMENT_KEY)) return false;
+
+  const state = safeJson(localStorage.getItem(STORAGE_KEY), null);
+  if (!state || !Array.isArray(state.athletes) || !state.athletes.length) return false;
+
+  const teamAssignments = safeJson(localStorage.getItem(TEAM_KEY), {});
+  let assigned = 0;
+  let female = 0;
+  let male = 0;
+
+  state.athletes.forEach((athlete) => {
+    const assignment = ROSTER_ASSIGNMENTS[athlete.id];
+    if (!assignment) return;
+
+    athlete.sex = assignment.sex;
+    athlete.teamId = assignment.teamId;
+    teamAssignments[athlete.id] = assignment.teamId;
+    assigned += 1;
+    if (assignment.sex === 'Female') female += 1;
+    if (assignment.sex === 'Male') male += 1;
+  });
+
+  if (!assigned) return false;
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(TEAM_KEY, JSON.stringify(teamAssignments));
+  STALE_ANALYSIS_KEYS.forEach((key) => localStorage.removeItem(key));
+  localStorage.setItem(ROSTER_ASSIGNMENT_KEY, JSON.stringify({
+    appliedAt: new Date().toISOString(),
+    assigned,
+    female,
+    male
+  }));
+  window.dispatchEvent(new CustomEvent('xccommand:local-state-changed'));
+  return true;
+}
+
 function currentUserOnce(auth) {
   return new Promise((resolve) => {
     let unsubscribe = () => {};
@@ -99,8 +182,16 @@ function currentUserOnce(auth) {
 export async function prepareSeasonResetCloud() {
   clearStaleAnalysisOnce();
   applyAug1AttendanceOnce();
+  applyRosterAssignmentsOnce();
 
-  if (!localStorage.getItem(RESET_KEY) || localStorage.getItem(CLOUD_RESET_KEY)) {
+  const needsInitialCloudReset = Boolean(
+    localStorage.getItem(RESET_KEY) && !localStorage.getItem(CLOUD_RESET_KEY)
+  );
+  const needsRosterCloudUpdate = Boolean(
+    localStorage.getItem(ROSTER_ASSIGNMENT_KEY) && !localStorage.getItem(ROSTER_ASSIGNMENT_CLOUD_KEY)
+  );
+
+  if (!needsInitialCloudReset && !needsRosterCloudUpdate) {
     return { allowCloudSync: true, resetNeeded: false };
   }
 
@@ -109,15 +200,21 @@ export async function prepareSeasonResetCloud() {
   const user = await currentUserOnce(auth);
 
   if (!user) {
-    return { allowCloudSync: true, resetNeeded: true, signedOut: true };
+    return {
+      allowCloudSync: true,
+      resetNeeded: needsInitialCloudReset,
+      rosterUpdateNeeded: needsRosterCloudUpdate,
+      signedOut: true
+    };
   }
 
   const state = safeJson(localStorage.getItem(STORAGE_KEY), null);
   if (!state) {
     return {
       allowCloudSync: false,
-      resetNeeded: true,
-      error: 'The newly seeded local state could not be read.'
+      resetNeeded: needsInitialCloudReset,
+      rosterUpdateNeeded: needsRosterCloudUpdate,
+      error: 'The updated local state could not be read.'
     };
   }
 
@@ -148,17 +245,33 @@ export async function prepareSeasonResetCloud() {
       teamId,
       lastSyncedAtMs: now
     }));
-    localStorage.setItem(CLOUD_RESET_KEY, JSON.stringify({
-      appliedAt: new Date().toISOString(),
-      teamId
-    }));
 
-    return { allowCloudSync: true, resetNeeded: false, cloudUpdated: true };
+    if (needsInitialCloudReset) {
+      localStorage.setItem(CLOUD_RESET_KEY, JSON.stringify({
+        appliedAt: new Date().toISOString(),
+        teamId
+      }));
+    }
+
+    if (needsRosterCloudUpdate) {
+      localStorage.setItem(ROSTER_ASSIGNMENT_CLOUD_KEY, JSON.stringify({
+        appliedAt: new Date().toISOString(),
+        teamId
+      }));
+    }
+
+    return {
+      allowCloudSync: true,
+      resetNeeded: false,
+      rosterUpdateNeeded: false,
+      cloudUpdated: true
+    };
   } catch (error) {
-    console.error('XC Command could not replace the cloud season data.', error);
+    console.error('XC Command could not update the cloud roster data.', error);
     return {
       allowCloudSync: false,
-      resetNeeded: true,
+      resetNeeded: needsInitialCloudReset,
+      rosterUpdateNeeded: needsRosterCloudUpdate,
       error: error?.message || String(error)
     };
   }
