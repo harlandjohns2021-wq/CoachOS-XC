@@ -6,6 +6,8 @@ const STORAGE_KEY = 'coachos_xc_v2';
 const RESET_KEY = 'xccommand_season_reset_2026_08_01_v1';
 const CLOUD_RESET_KEY = 'xccommand_season_reset_2026_08_01_cloud_v1';
 const CACHE_RESET_KEY = 'xccommand_season_reset_2026_08_01_cache_v1';
+const ATTENDANCE_MIGRATION_KEY = 'xccommand_attendance_2026_08_01_v1';
+const ATTENDANCE_DATE = '2026-08-01';
 const CLOUD_META_KEY = 'xccommand_cloud_meta_v1';
 const STALE_ANALYSIS_KEYS = [
   'xccommand_ai_coach_cache_v1',
@@ -37,6 +39,46 @@ function clearStaleAnalysisOnce() {
   localStorage.setItem(CACHE_RESET_KEY, JSON.stringify({ appliedAt: new Date().toISOString() }));
 }
 
+function applyAug1AttendanceOnce() {
+  if (localStorage.getItem(ATTENDANCE_MIGRATION_KEY)) return false;
+
+  const state = safeJson(localStorage.getItem(STORAGE_KEY), null);
+  if (!state || !Array.isArray(state.athletes) || !state.athletes.length) return false;
+
+  const timedAthleteIds = new Set(
+    (Array.isArray(state.results) ? state.results : [])
+      .filter((result) => (
+        result?.date === ATTENDANCE_DATE &&
+        result?.distance === '1 Mile' &&
+        Number(result?.seconds) > 0
+      ))
+      .map((result) => result.athleteId)
+  );
+
+  if (!timedAthleteIds.size) return false;
+
+  state.attendance = state.attendance && typeof state.attendance === 'object'
+    ? state.attendance
+    : {};
+  state.attendance[ATTENDANCE_DATE] = {};
+
+  state.athletes.forEach((athlete) => {
+    state.attendance[ATTENDANCE_DATE][athlete.id] = timedAthleteIds.has(athlete.id)
+      ? 'Present'
+      : 'Absent';
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(ATTENDANCE_MIGRATION_KEY, JSON.stringify({
+    appliedAt: new Date().toISOString(),
+    date: ATTENDANCE_DATE,
+    present: timedAthleteIds.size,
+    absent: Math.max(0, state.athletes.length - timedAthleteIds.size)
+  }));
+  window.dispatchEvent(new CustomEvent('xccommand:local-state-changed'));
+  return true;
+}
+
 function currentUserOnce(auth) {
   return new Promise((resolve) => {
     let unsubscribe = () => {};
@@ -56,6 +98,7 @@ function currentUserOnce(auth) {
 
 export async function prepareSeasonResetCloud() {
   clearStaleAnalysisOnce();
+  applyAug1AttendanceOnce();
 
   if (!localStorage.getItem(RESET_KEY) || localStorage.getItem(CLOUD_RESET_KEY)) {
     return { allowCloudSync: true, resetNeeded: false };
