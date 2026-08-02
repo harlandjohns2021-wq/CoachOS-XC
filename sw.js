@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xc-command-v9';
+const CACHE_NAME = 'xc-command-v11';
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const APP_SHELL = [
   './results-import.js',
   './practice-enhancements.js',
   './speech-to-text.js',
+  './season-bootstrap.js',
   './app-modules.js',
   './startup-reconcile.js',
   './roster-profile.js',
@@ -33,14 +34,24 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
       keys
         .filter((key) => key !== CACHE_NAME)
         .map((key) => caches.delete(key))
-    ))
-  );
-  self.clients.claim();
+    );
+    await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clients.forEach((client) => client.postMessage({
+      type: 'xccommand:build-active',
+      build: CACHE_NAME
+    }));
+  })());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
