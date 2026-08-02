@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xc-command-v7';
+const CACHE_NAME = 'xc-command-v8';
 const APP_SHELL = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const APP_SHELL = [
   './practice-enhancements.js',
   './speech-to-text.js',
   './app-modules.js',
+  './startup-reconcile.js',
   './data-integrity-fixes.js',
   './firebase-cloud.js',
   './sync-core.js',
