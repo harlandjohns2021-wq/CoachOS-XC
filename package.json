@@ -1,0 +1,13 @@
+{
+  "name": "xc-command",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/static-smoke.mjs && node tests/sync-core-stress.mjs",
+    "test:smoke": "node tests/static-smoke.mjs",
+    "test:stress": "node tests/sync-core-stress.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
