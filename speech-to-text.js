@@ -75,7 +75,9 @@ const XC_SEASON_RESET_APPLIED = (() => {
   function seconds(value) {
     if (!value) return null;
     const [minutes, secs] = value.split(':').map(Number);
-    return Number.isFinite(minutes) && Number.isFinite(secs) ? minutes * 60 + secs : null;
+    return Number.isFinite(minutes) && Number.isFinite(secs)
+      ? minutes * 60 + secs
+      : null;
   }
 
   const previous = safeJson(localStorage.getItem(STORAGE_KEY), null);
@@ -124,7 +126,7 @@ const XC_SEASON_RESET_APPLIED = (() => {
   addRoster(juniorHigh, 'JH');
 
   const nextState = {
-    version: 2,
+    version: 3,
     settings: {
       teamName: priorSettings.teamName || 'Harts Bluff XC',
       season: '2026 XC',
@@ -142,7 +144,14 @@ const XC_SEASON_RESET_APPLIED = (() => {
     athletes,
     results,
     attendance: {},
-    practices: []
+    practices: [],
+    rosterAssignments: {},
+    customDistances: [],
+    tombstones: {
+      athletes: {},
+      results: {},
+      practices: {}
+    }
   };
 
   localStorage.removeItem(LEGACY_KEY);
@@ -159,3 +168,9 @@ const XC_SEASON_RESET_APPLIED = (() => {
   window.location.reload();
   return true;
 })();
+
+if (!XC_SEASON_RESET_APPLIED) {
+  import('./app-modules.js').catch((error) => {
+    console.error('XC Command application modules failed to load.', error);
+  });
+}
