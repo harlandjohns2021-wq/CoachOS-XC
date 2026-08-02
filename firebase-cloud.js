@@ -12,8 +12,14 @@ import {
   doc,
   getDoc,
   setDoc,
-  onSnapshot
+  onSnapshot,
+  runTransaction
 } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+import {
+  defaultState,
+  mergeStates,
+  normalizeState
+} from './sync-core.js';
 
 const STORAGE_KEY = 'coachos_xc_v2';
 const CLOUD_META_KEY = 'xccommand_cloud_meta_v1';
@@ -31,57 +37,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
 const nativeSetItem = Storage.prototype.setItem;
+
 let currentUser = null;
 let currentTeamId = null;
 let unsubscribeSnapshot = null;
 let syncTimer = null;
 let suppressLocalSignal = false;
+let reconciliationInProgress = false;
 let authModal = null;
-
-function defaultState() {
-  return {
-    version: 2,
-    settings: {
-      teamName: 'Harts Bluff XC',
-      season: '2026 XC',
-      coachName: '',
-      aiRole: 'head_coach',
-      aiAthleteDetail: 'team_only',
-      aiScope: {
-        teamTrends: true,
-        athleteTrends: true,
-        workloadBalance: true,
-        raceReadiness: true,
-        coachQueries: true
-      }
-    },
-    athletes: [],
-    results: [],
-    attendance: {},
-    practices: []
-  };
-}
-
-function normalizeState(input) {
-  const base = defaultState();
-  const value = input && typeof input === 'object' ? input : {};
-  return {
-    ...base,
-    ...value,
-    version: 2,
-    settings: {
-      ...base.settings,
-      ...(value.settings || {}),
-      aiScope: { ...base.settings.aiScope, ...((value.settings || {}).aiScope || {}) }
-    },
-    athletes: Array.isArray(value.athletes) ? value.athletes : [],
-    results: Array.isArray(value.results) ? value.results : [],
-    attendance: value.attendance && typeof value.attendance === 'object' ? value.attendance : {},
-    practices: Array.isArray(value.practices) ? value.practices : []
-  };
-}
+let reloadScheduled = false;
 
 function readLocalState() {
   try {
@@ -97,100 +62,8 @@ function writeLocalState(state) {
   suppressLocalSignal = false;
 }
 
-function meaningfulState(state) {
-  return Boolean(
-    state.athletes.length ||
-    state.results.length ||
-    state.practices.length ||
-    Object.keys(state.attendance || {}).length
-  );
-}
-
-function normalizeName(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function mergeStates(remoteInput, localInput) {
-  const remote = normalizeState(remoteInput);
-  const local = normalizeState(localInput);
-  const athletes = [];
-  const athleteByName = new Map();
-  const idMap = new Map();
-
-  const addAthlete = (athlete, preferExisting = true) => {
-    const key = normalizeName(athlete.name);
-    const existing = athleteByName.get(key);
-    if (existing && key) {
-      idMap.set(athlete.id, existing.id);
-      if (!preferExisting) Object.assign(existing, athlete, { id: existing.id });
-      return existing;
-    }
-    const copy = { ...athlete };
-    athletes.push(copy);
-    if (key) athleteByName.set(key, copy);
-    idMap.set(athlete.id, copy.id);
-    return copy;
-  };
-
-  remote.athletes.forEach((athlete) => addAthlete(athlete, true));
-  local.athletes.forEach((athlete) => addAthlete(athlete, true));
-
-  const remapAthleteId = (id) => idMap.get(id) || id;
-  const results = [];
-  const resultKeys = new Set();
-  const addResult = (result) => {
-    const copy = { ...result, athleteId: remapAthleteId(result.athleteId) };
-    const key = [copy.athleteId, copy.date, copy.distance, Number(copy.seconds), copy.source || '', copy.meetName || ''].join('|');
-    if (resultKeys.has(key)) return;
-    resultKeys.add(key);
-    results.push(copy);
-  };
-  remote.results.forEach(addResult);
-  local.results.forEach(addResult);
-
-  const attendance = {};
-  const mergeAttendance = (source) => {
-    Object.entries(source || {}).forEach(([date, day]) => {
-      attendance[date] ||= {};
-      Object.entries(day || {}).forEach(([athleteId, status]) => {
-        attendance[date][remapAthleteId(athleteId)] = status;
-      });
-    });
-  };
-  mergeAttendance(remote.attendance);
-  mergeAttendance(local.attendance);
-
-  const practicesByDate = new Map();
-  [...remote.practices, ...local.practices].forEach((practice) => {
-    const key = practice.date || practice.id;
-    const existing = practicesByDate.get(key);
-    if (!existing) {
-      practicesByDate.set(key, { ...practice });
-      return;
-    }
-    const existingStamp = Date.parse(existing.updatedAt || existing.date || 0) || 0;
-    const incomingStamp = Date.parse(practice.updatedAt || practice.date || 0) || 0;
-    if (incomingStamp >= existingStamp) practicesByDate.set(key, { ...practice });
-  });
-
-  return normalizeState({
-    ...remote,
-    ...local,
-    settings: {
-      ...remote.settings,
-      ...Object.fromEntries(Object.entries(local.settings || {}).filter(([, value]) => String(value || '').trim()))
-    },
-    athletes,
-    results,
-    attendance,
-    practices: [...practicesByDate.values()]
-  });
+function localStateJson() {
+  return JSON.stringify(readLocalState());
 }
 
 function getCloudMeta() {
@@ -202,7 +75,9 @@ function getCloudMeta() {
 }
 
 function setCloudMeta(patch) {
-  nativeSetItem.call(localStorage, CLOUD_META_KEY, JSON.stringify({ ...getCloudMeta(), ...patch }));
+  const next = { ...getCloudMeta(), ...patch };
+  nativeSetItem.call(localStorage, CLOUD_META_KEY, JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent('xccommand:cloud-meta', { detail: next }));
 }
 
 function setStatus(text, tone = '') {
@@ -213,27 +88,47 @@ function setStatus(text, tone = '') {
     settingsPill.textContent = text;
     settingsPill.className = `pill ${tone}`.trim();
   }
+  window.dispatchEvent(new CustomEvent('xccommand:cloud-status', {
+    detail: { text, tone }
+  }));
 }
 
 function setAuthMessage(message, isError = false) {
-  const el = document.getElementById('xcAuthMessage');
-  if (!el) return;
-  el.textContent = message;
-  el.style.color = isError ? '#b42318' : '';
+  const element = document.getElementById('xcAuthMessage');
+  if (!element) return;
+  element.textContent = message;
+  element.style.color = isError ? '#b42318' : '';
 }
 
 function friendlyAuthError(error) {
-  const code = error?.code || '';
   const map = {
     'auth/email-already-in-use': 'That email already has an XC Command account.',
     'auth/invalid-email': 'Enter a valid email address.',
     'auth/invalid-credential': 'The email or password is incorrect.',
     'auth/missing-password': 'Enter your password.',
-    'auth/weak-password': 'Use a stronger password with at least 6 characters.',
+    'auth/weak-password': 'Use a password with at least 6 characters.',
     'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
     'auth/network-request-failed': 'XC Command could not reach Firebase. Check your connection.'
   };
-  return map[code] || error?.message || 'XC Command could not complete that account action.';
+  return map[error?.code] || error?.message || 'XC Command could not complete that account action.';
+}
+
+function friendlySyncError(error) {
+  if (error?.code === 'permission-denied') {
+    return 'Cloud access is blocked by Firebase rules. Device data is still saved.';
+  }
+  if (!navigator.onLine) return 'Offline. Changes remain on this device until connection returns.';
+  return error?.message || 'Cloud synchronization failed.';
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[character]));
 }
 
 function injectCloudUI() {
@@ -241,31 +136,44 @@ function injectCloudUI() {
 
   const topActions = document.querySelector('.top-actions');
   if (topActions) {
-    const deviceChip = [...topActions.querySelectorAll('.chip')].find((chip) => chip.textContent.includes('Auto-saved'));
+    const deviceChip = [...topActions.querySelectorAll('.chip')]
+      .find((chip) => chip.textContent.includes('Auto-saved'));
     if (deviceChip) {
       deviceChip.id = 'cloudStatusChip';
       deviceChip.textContent = 'Device only';
     }
+
     const button = document.createElement('button');
     button.type = 'button';
     button.id = 'cloudAccountButton';
     button.className = 'secondary';
     button.textContent = 'Sign in';
     button.addEventListener('click', openAuthModal);
+
     const settingsButton = document.getElementById('openSettings');
     if (settingsButton) topActions.insertBefore(button, settingsButton);
     else topActions.appendChild(button);
   }
 
-  const securityCard = [...document.querySelectorAll('#settings .card')].find((card) => card.querySelector('h3')?.textContent.trim() === 'Account security');
+  const securityCard = [...document.querySelectorAll('#settings .card')]
+    .find((card) => card.querySelector('h3')?.textContent.trim() === 'Account security');
+
   if (securityCard) {
     securityCard.innerHTML = `
       <div class="card-head">
-        <div><h3>XC Command account</h3><div class="sub">Firebase authentication and cloud synchronization</div></div>
+        <div>
+          <h3>XC Command account</h3>
+          <div class="sub">Firebase authentication and protected cloud synchronization</div>
+        </div>
         <span class="pill warn" id="cloudSettingsPill">Signed out</span>
       </div>
-      <div class="insight" id="cloudSettingsBody"><strong>Your data is currently stored on this device.</strong><p>Sign in to sync this team's XC Command data through Firebase.</p></div>
-      <div class="toolbar" style="margin-top:14px"><button class="primary" id="cloudSettingsButton">Sign in or create account</button></div>
+      <div class="insight" id="cloudSettingsBody">
+        <strong>Your data is stored on this device.</strong>
+        <p>Sign in to back it up and synchronize authorized devices.</p>
+      </div>
+      <div class="toolbar" style="margin-top:14px">
+        <button class="primary" id="cloudSettingsButton">Sign in or create account</button>
+      </div>
     `;
     document.getElementById('cloudSettingsButton')?.addEventListener('click', openAuthModal);
   }
@@ -275,15 +183,30 @@ function injectCloudUI() {
   authModal.id = 'xcAuthModal';
   authModal.setAttribute('role', 'dialog');
   authModal.setAttribute('aria-modal', 'true');
+  authModal.setAttribute('aria-labelledby', 'xcAuthTitle');
   authModal.innerHTML = `
     <div class="modal">
-      <div class="modal-head"><div><strong>XC Command account</strong><div class="sub">Sign in to keep your team data synced across devices.</div></div><button class="icon-btn" id="xcAuthClose">×</button></div>
+      <div class="modal-head">
+        <div>
+          <strong id="xcAuthTitle">XC Command account</strong>
+          <div class="sub">Sign in to keep team data synchronized.</div>
+        </div>
+        <button class="icon-btn" id="xcAuthClose" aria-label="Close account window">×</button>
+      </div>
       <div class="modal-body">
         <div class="form-grid">
-          <div class="field span-4"><label>Email</label><input id="xcAuthEmail" type="email" autocomplete="email" data-no-speech="true"></div>
-          <div class="field span-4"><label>Password</label><input id="xcAuthPassword" type="password" autocomplete="current-password" data-no-speech="true"></div>
+          <div class="field span-4">
+            <label for="xcAuthEmail">Email</label>
+            <input id="xcAuthEmail" type="email" autocomplete="email">
+          </div>
+          <div class="field span-4" id="xcPasswordField">
+            <label for="xcAuthPassword">Password</label>
+            <input id="xcAuthPassword" type="password" autocomplete="current-password">
+          </div>
         </div>
-        <div id="xcAuthMessage" class="insight" style="margin-top:16px">Your existing device data will be preserved and uploaded when you create or sign into your account.</div>
+        <div id="xcAuthMessage" class="insight" style="margin-top:16px">
+          Existing device data will be merged with cloud data rather than replaced.
+        </div>
       </div>
       <div class="modal-foot" style="flex-wrap:wrap">
         <button class="ghost" id="xcResetPassword">Reset password</button>
@@ -296,7 +219,9 @@ function injectCloudUI() {
   document.body.appendChild(authModal);
 
   document.getElementById('xcAuthClose')?.addEventListener('click', closeAuthModal);
-  authModal.addEventListener('click', (event) => { if (event.target === authModal) closeAuthModal(); });
+  authModal.addEventListener('click', (event) => {
+    if (event.target === authModal) closeAuthModal();
+  });
   document.getElementById('xcSignIn')?.addEventListener('click', handleSignIn);
   document.getElementById('xcCreateAccount')?.addEventListener('click', handleCreateAccount);
   document.getElementById('xcSignOut')?.addEventListener('click', handleSignOut);
@@ -306,25 +231,22 @@ function injectCloudUI() {
 function openAuthModal() {
   if (!authModal) return;
   const email = document.getElementById('xcAuthEmail');
-  const password = document.getElementById('xcAuthPassword');
-  if (currentUser) {
-    email.value = currentUser.email || '';
-    email.disabled = true;
-    password.closest('.field').classList.add('hide');
-    document.getElementById('xcSignIn').classList.add('hide');
-    document.getElementById('xcCreateAccount').classList.add('hide');
-    document.getElementById('xcResetPassword').classList.add('hide');
-    document.getElementById('xcSignOut').classList.remove('hide');
-    setAuthMessage(`Signed in as ${currentUser.email}. Your XC Command data is synced to Firebase.`);
-  } else {
-    email.disabled = false;
-    password.closest('.field').classList.remove('hide');
-    document.getElementById('xcSignIn').classList.remove('hide');
-    document.getElementById('xcCreateAccount').classList.remove('hide');
-    document.getElementById('xcResetPassword').classList.remove('hide');
-    document.getElementById('xcSignOut').classList.add('hide');
-    setAuthMessage('Your existing device data will be preserved and uploaded when you create or sign into your account.');
-  }
+  const passwordField = document.getElementById('xcPasswordField');
+  const signedIn = Boolean(currentUser);
+
+  if (signedIn) email.value = currentUser.email || '';
+  email.disabled = signedIn;
+  passwordField?.classList.toggle('hide', signedIn);
+  document.getElementById('xcSignIn')?.classList.toggle('hide', signedIn);
+  document.getElementById('xcCreateAccount')?.classList.toggle('hide', signedIn);
+  document.getElementById('xcResetPassword')?.classList.toggle('hide', signedIn);
+  document.getElementById('xcSignOut')?.classList.toggle('hide', !signedIn);
+
+  setAuthMessage(
+    signedIn
+      ? `Signed in as ${currentUser.email || 'coach'}.`
+      : 'Existing device data will be merged with cloud data rather than replaced.'
+  );
   authModal.classList.add('open');
   setTimeout(() => email.focus(), 50);
 }
@@ -383,16 +305,17 @@ async function handlePasswordReset() {
 async function ensureTeam(user) {
   const userRef = doc(db, 'users', user.uid);
   const userSnapshot = await getDoc(userRef);
-  let teamId = userSnapshot.exists() ? userSnapshot.data().defaultTeamId : null;
-  if (!teamId) teamId = user.uid;
+  const teamId = userSnapshot.exists() && userSnapshot.data().defaultTeamId
+    ? userSnapshot.data().defaultTeamId
+    : user.uid;
 
+  const local = readLocalState();
   const teamRef = doc(db, 'teams', teamId);
   const teamSnapshot = await getDoc(teamRef);
-  const localState = readLocalState();
 
   if (!teamSnapshot.exists()) {
     await setDoc(teamRef, {
-      name: localState.settings.teamName || 'My XC Team',
+      name: local.settings.teamName || 'My XC Team',
       ownerUid: user.uid,
       memberUids: [user.uid],
       createdAtMs: Date.now(),
@@ -414,33 +337,63 @@ function stateRef() {
 }
 
 async function pushLocalState() {
-  if (!currentUser || !currentTeamId) return;
+  if (!currentUser || !currentTeamId || reconciliationInProgress) return false;
+
   clearTimeout(syncTimer);
+  reconciliationInProgress = true;
   setStatus('Syncing…', 'warn');
-  const state = readLocalState();
-  const now = Date.now();
+
   try {
-    await setDoc(stateRef(), {
-      state,
-      updatedAtMs: now,
-      updatedBy: currentUser.uid
+    const local = readLocalState();
+    let committed = local;
+    const now = Date.now();
+
+    await runTransaction(db, async (transaction) => {
+      const reference = stateRef();
+      const snapshot = await transaction.get(reference);
+      const remote = snapshot.exists()
+        ? normalizeState(snapshot.data().state || {})
+        : defaultState();
+
+      committed = snapshot.exists() ? mergeStates(remote, local) : local;
+      transaction.set(reference, {
+        state: committed,
+        updatedAtMs: now,
+        updatedBy: currentUser.uid
+      });
     });
+
+    if (JSON.stringify(committed) !== localStateJson()) writeLocalState(committed);
+
     await setDoc(doc(db, 'teams', currentTeamId), {
-      name: state.settings.teamName || 'My XC Team',
+      name: committed.settings.teamName || 'My XC Team',
       updatedAtMs: now
     }, { merge: true });
-    setCloudMeta({ teamId: currentTeamId, lastSyncedAtMs: now });
+
+    setCloudMeta({
+      teamId: currentTeamId,
+      lastSyncedAtMs: now,
+      pending: false,
+      lastError: ''
+    });
     setStatus('Cloud synced', 'good');
+    return true;
   } catch (error) {
     console.error('XC Command cloud sync failed.', error);
-    setStatus(error?.code === 'permission-denied' ? 'Rules needed' : 'Sync error', 'warn');
+    const message = friendlySyncError(error);
+    setCloudMeta({ pending: true, lastError: message });
+    setStatus(error?.code === 'permission-denied' ? 'Cloud setup needed' : 'Sync error', 'warn');
+    return false;
+  } finally {
+    reconciliationInProgress = false;
   }
 }
 
 function schedulePush() {
   if (!currentUser || !currentTeamId || suppressLocalSignal) return;
+  setCloudMeta({ pending: true });
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(pushLocalState, 650);
+  syncTimer = setTimeout(pushLocalState, 700);
 }
 
 async function hydrateFromCloud() {
@@ -453,49 +406,91 @@ async function hydrateFromCloud() {
   }
 
   const remote = normalizeState(snapshot.data().state || {});
-  const merged = meaningfulState(local) ? mergeStates(remote, local) : remote;
+  const merged = mergeStates(remote, local);
+  const remoteJson = JSON.stringify(remote);
   const localJson = JSON.stringify(local);
   const mergedJson = JSON.stringify(merged);
-  const remoteJson = JSON.stringify(remote);
 
-  if (mergedJson !== remoteJson) {
-    writeLocalState(merged);
-    await pushLocalState();
-  } else if (mergedJson !== localJson) {
-    writeLocalState(merged);
-    setCloudMeta({ teamId: currentTeamId, lastSyncedAtMs: snapshot.data().updatedAtMs || Date.now() });
-    return true;
-  }
+  if (mergedJson !== localJson) writeLocalState(merged);
+  if (mergedJson !== remoteJson) await pushLocalState();
 
+  setCloudMeta({
+    teamId: currentTeamId,
+    lastSyncedAtMs: snapshot.data().updatedAtMs || Date.now(),
+    pending: false,
+    lastError: ''
+  });
   setStatus('Cloud synced', 'good');
-  return false;
+  return mergedJson !== localJson;
+}
+
+function scheduleReload() {
+  if (reloadScheduled) return;
+  reloadScheduled = true;
+  setTimeout(() => window.location.reload(), 80);
 }
 
 function startRealtimeSync() {
-  if (unsubscribeSnapshot) unsubscribeSnapshot();
-  unsubscribeSnapshot = onSnapshot(stateRef(), (snapshot) => {
-    if (!snapshot.exists() || snapshot.metadata.hasPendingWrites) return;
+  unsubscribeSnapshot?.();
+  unsubscribeSnapshot = onSnapshot(stateRef(), async (snapshot) => {
+    if (!snapshot.exists() || snapshot.metadata.hasPendingWrites || reconciliationInProgress) return;
+
     const remote = normalizeState(snapshot.data().state || {});
     const local = readLocalState();
     if (JSON.stringify(remote) === JSON.stringify(local)) {
       setStatus('Cloud synced', 'good');
       return;
     }
-    writeLocalState(remote);
-    setCloudMeta({ teamId: currentTeamId, lastSyncedAtMs: snapshot.data().updatedAtMs || Date.now() });
-    setStatus('Updated from cloud', 'good');
-    window.location.reload();
+
+    reconciliationInProgress = true;
+    try {
+      const merged = mergeStates(remote, local);
+      const mergedJson = JSON.stringify(merged);
+      const localJson = JSON.stringify(local);
+      const remoteJson = JSON.stringify(remote);
+
+      if (mergedJson !== localJson) {
+        writeLocalState(merged);
+        setCloudMeta({
+          teamId: currentTeamId,
+          lastSyncedAtMs: snapshot.data().updatedAtMs || Date.now(),
+          pending: mergedJson !== remoteJson,
+          lastError: ''
+        });
+        scheduleReload();
+      }
+
+      reconciliationInProgress = false;
+      if (mergedJson !== remoteJson) await pushLocalState();
+      else setStatus('Updated from cloud', 'good');
+    } catch (error) {
+      console.error('XC Command reconciliation failed.', error);
+      const message = friendlySyncError(error);
+      setCloudMeta({ pending: true, lastError: message });
+      setStatus('Sync error', 'warn');
+    } finally {
+      reconciliationInProgress = false;
+    }
   }, (error) => {
     console.error('XC Command real-time sync failed.', error);
-    setStatus(error?.code === 'permission-denied' ? 'Rules needed' : 'Sync error', 'warn');
+    const message = friendlySyncError(error);
+    setCloudMeta({ pending: true, lastError: message });
+    setStatus(error?.code === 'permission-denied' ? 'Cloud setup needed' : 'Sync error', 'warn');
   });
 }
 
 function updateSignedInUI(user) {
   const accountButton = document.getElementById('cloudAccountButton');
   if (accountButton) accountButton.textContent = user.email || 'Account';
+
   const body = document.getElementById('cloudSettingsBody');
-  if (body) body.innerHTML = `<strong>Signed in as ${escapeHtml(user.email || 'coach')}.</strong><p>Roster, attendance, practices, timing results, and imported meet data are backed up to Firebase and synchronized with this account.</p>`;
+  if (body) {
+    body.innerHTML = `
+      <strong>Signed in as ${escapeHtml(user.email || 'coach')}.</strong>
+      <p>Roster, attendance, practices and results are merged transactionally across authorized devices.</p>
+    `;
+  }
+
   const settingsButton = document.getElementById('cloudSettingsButton');
   if (settingsButton) settingsButton.textContent = 'Manage account';
   setStatus('Syncing…', 'warn');
@@ -504,17 +499,18 @@ function updateSignedInUI(user) {
 function updateSignedOutUI() {
   const accountButton = document.getElementById('cloudAccountButton');
   if (accountButton) accountButton.textContent = 'Sign in';
+
   const body = document.getElementById('cloudSettingsBody');
-  if (body) body.innerHTML = '<strong>Your data is stored on this device.</strong><p>Sign in to back up this team and keep XC Command synchronized across your authorized devices.</p>';
+  if (body) {
+    body.innerHTML = `
+      <strong>Your data is stored on this device.</strong>
+      <p>Sign in to back it up and synchronize authorized devices.</p>
+    `;
+  }
+
   const settingsButton = document.getElementById('cloudSettingsButton');
   if (settingsButton) settingsButton.textContent = 'Sign in or create account';
   setStatus('Device only', 'warn');
-}
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-  }[char]));
 }
 
 Storage.prototype.setItem = function patchedSetItem(key, value) {
@@ -525,15 +521,20 @@ Storage.prototype.setItem = function patchedSetItem(key, value) {
 };
 
 window.addEventListener('xccommand:local-state-changed', schedulePush);
+window.addEventListener('online', () => {
+  if (currentUser) pushLocalState();
+});
+window.addEventListener('offline', () => {
+  setCloudMeta({ pending: Boolean(currentUser) });
+  setStatus(currentUser ? 'Offline changes saved' : 'Device only', 'warn');
+});
 
 injectCloudUI();
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
-  if (unsubscribeSnapshot) {
-    unsubscribeSnapshot();
-    unsubscribeSnapshot = null;
-  }
+  unsubscribeSnapshot?.();
+  unsubscribeSnapshot = null;
 
   if (!user) {
     currentTeamId = null;
@@ -544,15 +545,13 @@ onAuthStateChanged(auth, async (user) => {
   updateSignedInUI(user);
   try {
     currentTeamId = await ensureTeam(user);
-    const needsReload = await hydrateFromCloud();
-    if (needsReload) {
-      window.location.reload();
-      return;
-    }
+    const changedLocally = await hydrateFromCloud();
     startRealtimeSync();
-    setStatus('Cloud synced', 'good');
+    if (changedLocally) scheduleReload();
   } catch (error) {
     console.error('XC Command Firebase setup failed.', error);
-    setStatus(error?.code === 'permission-denied' ? 'Rules needed' : 'Cloud error', 'warn');
+    const message = friendlySyncError(error);
+    setCloudMeta({ pending: true, lastError: message });
+    setStatus(error?.code === 'permission-denied' ? 'Cloud setup needed' : 'Cloud error', 'warn');
   }
 });
