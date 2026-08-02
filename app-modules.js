@@ -1,4 +1,5 @@
 async function startCoachOsModules() {
+  await import('./startup-reconcile.js');
   await import('./data-integrity-fixes.js');
   await import('./firebase-cloud.js');
   await import('./distance-enhancements.js');
