@@ -42,6 +42,7 @@ if (changed) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (!sessionStorage.getItem(RELOAD_GUARD)) {
     sessionStorage.setItem(RELOAD_GUARD, '1');
+    window.XC_STARTUP_RELOAD_PENDING = true;
     window.location.reload();
   }
 } else {
