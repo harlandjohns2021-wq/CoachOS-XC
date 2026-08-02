@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xc-command-v5';
+const CACHE_NAME = 'xc-command-v6';
 const APP_SHELL = [
   './',
   './index.html',
@@ -9,6 +9,10 @@ const APP_SHELL = [
   './practice-enhancements.js',
   './speech-to-text.js',
   './firebase-cloud.js',
+  './distance-enhancements.js',
+  './distance-core.js',
+  './past-seasons.js',
+  './readability.js',
   './manifest.json',
   './icon.svg'
 ];
